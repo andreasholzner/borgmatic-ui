@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabContent</class>
+ <widget class="QWidget" name="TabContent">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>827</width>
+    <height>694</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>1</x>
+     <y>0</y>
+     <width>821</width>
+     <height>691</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="configEditLabel">
+        <property name="text">
+         <string>Borgmatic Config:</string>
+        </property>
+        <property name="buddy">
+         <cstring>configEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="configEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="configEditFileButton">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset theme="document-open">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="editConfigButton">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset theme="edit-paste">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTableView" name="backupsTableView">
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="2" column="3">
+       <widget class="QPushButton" name="deleteConfigButton">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>43</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Delete Config</string>
+        </property>
+        <property name="icon">
+         <iconset theme="window-close">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="mountButton">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>43</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Mount</string>
+        </property>
+        <property name="icon">
+         <iconset theme="media-mount">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QPushButton" name="backupButton">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>43</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Backup</string>
+        </property>
+        <property name="icon">
+         <iconset theme="server-database">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="purgeCheckBox">
+        <property name="text">
+         <string>purge</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="umountButton">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>43</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Umount</string>
+        </property>
+        <property name="icon">
+         <iconset theme="media-eject">
+          <normaloff>.</normaloff>.</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="4">
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>configEdit</tabstop>
+  <tabstop>backupsTableView</tabstop>
+  <tabstop>mountButton</tabstop>
+  <tabstop>umountButton</tabstop>
+  <tabstop>backupButton</tabstop>
+  <tabstop>purgeCheckBox</tabstop>
+  <tabstop>deleteConfigButton</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
