@@ -14,13 +14,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(HEADERS
-        include/mainwindow.h
-        include/configtab.h)
+        include/MainWindow.h
+        include/ConfigTab.h
+        include/BackupConfig.h
+        include/BorgmaticManager.h)
 
 set(SRC
-        src/mainwindow.cpp
-        src/configtab.cpp
-        src/main.cpp)
+        src/MainWindow.cpp
+        src/ConfigTab.cpp
+        src/main.cpp
+        src/BackupConfig.cpp
+        src/BorgmaticManager.cpp)
 
 set(UIS
         ui/mainwindow.ui
