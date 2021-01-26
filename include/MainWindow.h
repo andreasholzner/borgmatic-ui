@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <memory>
+
+#include "BackupConfig.h"
 #include "BorgmaticManager.h"
 
 namespace Ui {
@@ -12,7 +15,7 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
-  explicit MainWindow(std::unique_ptr<BorgmaticManager> borgmaticManager, QWidget *parent = nullptr);
+  explicit MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget *parent = nullptr);
 
   ~MainWindow() override;
 
@@ -22,6 +25,8 @@ class MainWindow : public QMainWindow {
   void deleteConfigTab(int index);
 
  private:
+  void addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig);
+
   Ui::MainWindow *ui;
   std::unique_ptr<BorgmaticManager> borgmaticManager;
 };

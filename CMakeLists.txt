@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.9)
 project(borgmatic-ui LANGUAGES CXX)
 
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
+find_package(cereal REQUIRED)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -39,4 +40,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES AUTOUIC_SEARCH_PATHS ui)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         include)
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Core Qt5::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Core Qt5::Widgets cereal)

@@ -1,4 +1,7 @@
 #include "BackupConfig.h"
 
-std::string BackupConfig::borgmaticConfig() const { return pathToConfig.string(); }
-void BackupConfig::borgmaticConfig(const std::string &configFile) { pathToConfig = std::filesystem::path(configFile); }
+std::string BackupConfig::borgmaticConfigFile() const { return pathToConfig.string(); }
+
+void BackupConfig::borgmaticConfigFile(std::string const& configFile) {
+  pathToConfig = std::filesystem::path(configFile);
+}

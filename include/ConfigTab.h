@@ -1,6 +1,7 @@
 #ifndef BORGMATIC_UI_CONFIGTAB_H
 #define BORGMATIC_UI_CONFIGTAB_H
 
+#include <QString>
 #include <QTabWidget>
 #include <QWidget>
 #include <memory>
@@ -20,7 +21,7 @@ class ConfigTab : public QWidget {
   ~ConfigTab() override;
 
  private slots:
-  void on_configEdit_textChanged(const QString &fileName);
+  void on_configEdit_textChanged(QString const &fileName);
   void on_configEditFileButton_clicked();
   void on_deleteConfigButton_clicked();
 
