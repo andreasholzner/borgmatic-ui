@@ -1,10 +1,13 @@
-#include <memory>
+#include <spdlog/spdlog.h>
+
 #include <QApplication>
+#include <memory>
 
 #include "BorgmaticManager.h"
 #include "MainWindow.h"
 
 int main(int argc, char *argv[]) {
+  spdlog::set_level(spdlog::level::debug);
   QApplication a(argc, argv);
 
   QCoreApplication::setOrganizationName("holzner");

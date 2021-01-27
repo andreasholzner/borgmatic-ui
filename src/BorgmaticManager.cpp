@@ -4,6 +4,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
+#include <spdlog/spdlog.h>
 
 static char const *const SETTINGS_KEY = "backup_configs";
 
@@ -23,14 +24,18 @@ std::string BorgmaticManager::store() {
 
 void BorgmaticManager::loadSettings() {
   QSettings settings;
+  spdlog::info("Loading application settings");
   auto backupConfigs = settings.value(SETTINGS_KEY);
   if (!backupConfigs.isNull()) {
-    load(backupConfigs.toString().toStdString());
+    auto loadedSettings = backupConfigs.toString().toStdString();
+    spdlog::debug("loading settings: {}", loadedSettings);
+    load(loadedSettings);
   }
 }
 
 void BorgmaticManager::saveSettings() {
   QSettings settings;
+  spdlog::info("Saving application settings");
   settings.setValue(SETTINGS_KEY, QString(store().c_str()));
 }
 
