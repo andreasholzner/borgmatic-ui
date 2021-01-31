@@ -1,10 +1,14 @@
 #include "MainWindow.h"
 
 #include <QFileInfo>
+#include <QSettings>
 #include <QString>
 
 #include "ConfigTab.h"
 #include "ui_mainwindow.h"
+
+static char const* const GEOMETRY_KEY = "mainwindow/geometry";
+static char const* const STATE_KEY = "mainwindow/state";
 
 MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), borgmaticManager(std::move(manager)) {
@@ -13,9 +17,15 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* paren
   for (auto&& config : borgmaticManager->configs) {
     addTabForConfig(config);
   }
+  readWindowSettings();
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+  saveWindowSettings();
+  event->accept();
+}
 
 void MainWindow::on_menuNew_triggered() {
   auto borgmaticConfig = borgmaticManager->newBorgmaticConfig();
@@ -40,4 +50,15 @@ void MainWindow::addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig) 
   }
   ui->borgmaticTabWidget->addTab(newTab, label);
   connect(newTab, &ConfigTab::deleteTab, this, &MainWindow::deleteConfigTab);
+}
+
+void MainWindow::readWindowSettings() {
+  QSettings settings;
+  restoreGeometry(settings.value(GEOMETRY_KEY).toByteArray());
+  restoreState(settings.value(STATE_KEY).toByteArray());
+}
+void MainWindow::saveWindowSettings() {
+  QSettings settings;
+  settings.setValue(GEOMETRY_KEY, saveGeometry());
+  settings.setValue(STATE_KEY, saveState());
 }

@@ -26,6 +26,7 @@ class ConfigTab : public QWidget {
   void on_configEditFileButton_clicked();
   void on_startBackupButton_clicked();
   void on_deleteConfigButton_clicked();
+  void on_purgeCheckBox_stateChanged(int state);
 
  signals:
   void deleteTab(int index);

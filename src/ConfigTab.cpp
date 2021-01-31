@@ -41,10 +41,16 @@ void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()-
 
 void ConfigTab::on_startBackupButton_clicked() {}
 
+void ConfigTab::on_purgeCheckBox_stateChanged(int state) {
+  backupConfig->isBackupPurging(state == Qt::CheckState::Checked);
+}
+
 QTabWidget *ConfigTab::getTabWidget() const { return qobject_cast<QTabWidget *>(parentWidget()->parentWidget()); }
 
 void ConfigTab::updateFromBackupConfig() {
   ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
+  ui->purgeCheckBox->setCheckState(backupConfig->isBackupPurging() ? Qt::CheckState::Checked
+                                                                   : Qt::CheckState::Unchecked);
   auto info = backupConfig->info();
   ui->infoLocationLabel->setText(info.location.c_str());
   QLocale locale;

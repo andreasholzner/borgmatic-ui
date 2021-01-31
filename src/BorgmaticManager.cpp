@@ -24,7 +24,7 @@ std::string BorgmaticManager::store() {
 
 void BorgmaticManager::loadSettings() {
   QSettings settings;
-  spdlog::info("Loading application settings");
+  spdlog::info("Loading backup settings");
   auto backupConfigs = settings.value(SETTINGS_KEY);
   if (!backupConfigs.isNull()) {
     auto loadedSettings = backupConfigs.toString().toStdString();
@@ -35,7 +35,7 @@ void BorgmaticManager::loadSettings() {
 
 void BorgmaticManager::saveSettings() {
   QSettings settings;
-  spdlog::info("Saving application settings");
+  spdlog::info("Saving backup settings");
   settings.setValue(SETTINGS_KEY, QString(store().c_str()));
 }
 

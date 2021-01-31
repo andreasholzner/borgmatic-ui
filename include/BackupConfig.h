@@ -38,18 +38,20 @@ T safeJsonAccess(std::function<T()> input, T defaultValue = T()) {
 class BackupConfig {
  public:
   std::string borgmaticConfigFile() const;
+  bool isBackupPurging() const;
+  void isBackupPurging(bool state);
   void borgmaticConfigFile(std::string const&);
   std::vector<backup::helper::ListItem> list();
   backup::helper::Info info();
 
   template <typename Archive>
   void save(Archive& ar) const {
-    ar(pathToConfig.string());
+    ar(pathToConfig.string(), purgeFlag);
   }
   template <typename Archive>
   void load(Archive& ar) {
     std::string filePath;
-    ar(filePath);
+    ar(filePath, purgeFlag);
     pathToConfig = std::filesystem::path(filePath);
   }
 
@@ -57,6 +59,7 @@ class BackupConfig {
   nlohmann::json runSimpleBorgmaticCommandOnConfig(std::string const& action) const;
 
   std::filesystem::path pathToConfig;
+  bool purgeFlag;
 };
 
 #endif  // BORGMATIC_UI_BACKUPCONFIG_H

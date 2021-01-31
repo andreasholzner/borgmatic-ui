@@ -12,6 +12,9 @@ void BackupConfig::borgmaticConfigFile(std::string const& configFile) {
   pathToConfig = std::filesystem::path(configFile);
 }
 
+bool BackupConfig::isBackupPurging() const { return purgeFlag; }
+void BackupConfig::isBackupPurging(bool state) { purgeFlag = state; }
+
 std::vector<backup::helper::ListItem> BackupConfig::list() {
   auto jsonList = runSimpleBorgmaticCommandOnConfig("list");
 

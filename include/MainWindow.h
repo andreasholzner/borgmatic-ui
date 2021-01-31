@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QCloseEvent>
 #include <QMainWindow>
 #include <memory>
 
@@ -19,6 +20,9 @@ class MainWindow : public QMainWindow {
 
   ~MainWindow() override;
 
+ protected:
+  void closeEvent(QCloseEvent *event) override;
+
  private slots:
   void on_menuNew_triggered();
   void on_menuQuit_triggered();
@@ -26,6 +30,8 @@ class MainWindow : public QMainWindow {
 
  private:
   void addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig);
+  void readWindowSettings();
+  void saveWindowSettings();
 
   Ui::MainWindow *ui;
   std::unique_ptr<BorgmaticManager> borgmaticManager;
