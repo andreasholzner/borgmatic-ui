@@ -17,6 +17,7 @@ public:
  int rowCount(QModelIndex const &parent = QModelIndex()) const override;
  int columnCount(QModelIndex const &parent = QModelIndex()) const override;
  void updateBackups(std::vector<backup::helper::ListItem> const &data);
+ backup::helper::ListItem const &rowData(int row) const;
 
 private:
  std::vector<backup::helper::ListItem> backups;

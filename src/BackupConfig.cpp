@@ -38,6 +38,12 @@ backup::helper::Info BackupConfig::info() {
   return info;
 }
 
+void BackupConfig::startBackup(std::function<void()> onFinished,
+                               std::function<void(std::string)> const& outputHandler) {
+  worker.start(std::move(onFinished), outputHandler);
+}
+
+void BackupConfig::cancelBackup() { worker.cancel(); }
 nlohmann::json BackupConfig::runSimpleBorgmaticCommandOnConfig(std::string const& action) const {
   namespace bp = boost::process;
   bp::ipstream output;

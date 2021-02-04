@@ -4,9 +4,12 @@
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <functional>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
+
+#include "BackupWorker.h"
 
 namespace backup::helper {
 struct ListItem {
@@ -43,6 +46,10 @@ class BackupConfig {
   void borgmaticConfigFile(std::string const&);
   std::vector<backup::helper::ListItem> list();
   backup::helper::Info info();
+  void startBackup(
+      std::function<void()> onFinished,
+      std::function<void(std::string)> const& outputHandler = [](std::string const&) {});
+  void cancelBackup();
 
   template <typename Archive>
   void save(Archive& ar) const {
@@ -60,6 +67,7 @@ class BackupConfig {
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;
+  BackupWorker worker;
 };
 
 #endif  // BORGMATIC_UI_BACKUPCONFIG_H

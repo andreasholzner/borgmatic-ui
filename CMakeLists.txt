@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(borgmatic-ui LANGUAGES CXX)
 
-find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Concurrent REQUIRED)
 find_package(cereal REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(nlohmann_json REQUIRED)
@@ -22,7 +22,8 @@ set(HEADERS
         include/ConfigTab.h
         include/BackupConfig.h
         include/BorgmaticManager.h
-        include/BackupListModel.h)
+        include/BackupListModel.h
+        include/BackupWorker.h)
 
 set(SRC
         src/MainWindow.cpp
@@ -30,7 +31,8 @@ set(SRC
         src/main.cpp
         src/BackupConfig.cpp
         src/BorgmaticManager.cpp
-        src/BackupListModel.cpp)
+        src/BackupListModel.cpp
+        src/BackupWorker.cpp)
 
 set(UIS
         ui/mainwindow.ui

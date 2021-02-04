@@ -40,3 +40,5 @@ void BackupListModel::updateBackups(const std::vector<backup::helper::ListItem> 
   backups = data;
   endResetModel();
 }
+
+backup::helper::ListItem const &BackupListModel::rowData(int row) const { return backups.at(row); }
