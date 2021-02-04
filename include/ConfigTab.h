@@ -35,6 +35,7 @@ class ConfigTab : public QWidget {
 
  signals:
   void deleteTab(int index);
+  void setStatusMessage(QString const &message, int timeout = 0);
 
  private:
   QTabWidget *getTabWidget() const;

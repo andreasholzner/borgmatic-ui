@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QSettings>
+#include <QStatusBar>
 #include <QString>
 
 #include "ConfigTab.h"
@@ -50,6 +51,7 @@ void MainWindow::addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig) 
   }
   ui->borgmaticTabWidget->addTab(newTab, label);
   connect(newTab, &ConfigTab::deleteTab, this, &MainWindow::deleteConfigTab);
+  connect(newTab, &ConfigTab::setStatusMessage, ui->statusbar, &QStatusBar::showMessage);
 }
 
 void MainWindow::readWindowSettings() {

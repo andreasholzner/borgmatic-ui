@@ -44,7 +44,8 @@ void ConfigTab::on_configEditFileButton_clicked() {
 void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
 
 void ConfigTab::on_startBackupButton_clicked() {
-  backupConfig->startBackup([this]() { backupFinished(); }, [](std::string const &line) { spdlog::debug(line); });
+  backupConfig->startBackup([this]() { backupFinished(); },
+                            [this](std::string const &line) { emit setStatusMessage(line.c_str()); });
   ui->startBackupButton->setEnabled(false);
   ui->cancelBackupButton->setEnabled(true);
 }
@@ -86,7 +87,10 @@ void ConfigTab::tableRowChanged(const QModelIndex &current, const QModelIndex &p
   }
 }
 
-void ConfigTab::backupFinished() { spdlog::debug("Backup is done"); }
+void ConfigTab::backupFinished() {
+  emit setStatusMessage("Backup is done", 30000);
+  spdlog::debug("Backup is done");
+}
 
 QTabWidget *ConfigTab::getTabWidget() const { return qobject_cast<QTabWidget *>(parentWidget()->parentWidget()); }
 
