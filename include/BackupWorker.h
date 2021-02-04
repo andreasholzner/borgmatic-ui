@@ -10,8 +10,6 @@
 
 class BackupWorker {
  public:
-  BackupWorker() : ioService(), ioPipe(ioService) {}
-
   void start(
       std::function<void()> onFinished,
       std::function<void(std::string)> const &outputHandler = [](std::string const &) {});
@@ -19,9 +17,7 @@ class BackupWorker {
   void cancel();
 
  private:
-  boost::asio::io_service ioService;
   boost::asio::streambuf buffer;
-  boost::process::async_pipe ioPipe;
   boost::process::child backupProcess;
   QFuture<void> backupFuture;
   QFutureWatcher<void> backupWatcher;
