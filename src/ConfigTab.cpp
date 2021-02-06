@@ -101,8 +101,8 @@ void ConfigTab::updateFromBackupConfig() {
   auto info = backupConfig->info();
   ui->infoLocationLabel->setText(info.location.c_str());
   QLocale locale;
-  ui->infoOriginalSizeLabel->setText(locale.formattedDataSize(info.originalSize));
-  ui->infoCompressedSizeLabel->setText(locale.formattedDataSize(info.compressedSize));
+  ui->infoOriginalSizeLabel->setText(info.originalSize ? locale.formattedDataSize(info.originalSize) : "-");
+  ui->infoCompressedSizeLabel->setText(info.compressedSize ? locale.formattedDataSize(info.compressedSize) : "-");
 
   backupTableModel->updateBackups(backupConfig->list());
 }

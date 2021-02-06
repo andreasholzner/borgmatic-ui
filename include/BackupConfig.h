@@ -6,7 +6,9 @@
 #include <filesystem>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "BackupWorker.h"
@@ -24,6 +26,8 @@ struct Info {
   std::string location;
   std::int64_t originalSize;
   std::int64_t compressedSize;
+
+  Info() : id(""), location(""), originalSize(0), compressedSize(0) {}
 };
 
 template <typename T>
@@ -50,6 +54,7 @@ class BackupConfig {
       std::function<void()> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {});
   void cancelBackup();
+  bool isAccessible();
 
   template <typename Archive>
   void save(Archive& ar) const {
@@ -63,11 +68,13 @@ class BackupConfig {
   }
 
  private:
-  nlohmann::json runSimpleBorgmaticCommandOnConfig(std::string const& action) const;
+  std::variant<nlohmann::json, std::vector<std::string>> runSimpleBorgmaticCommandOnConfig(
+      std::string const& action) const;
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;
   BackupWorker worker;
+  std::optional<backup::helper::Info> info_;
 };
 
 #endif  // BORGMATIC_UI_BACKUPCONFIG_H

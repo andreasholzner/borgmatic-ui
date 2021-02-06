@@ -3,8 +3,9 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 #include <boost/process.hpp>
-#include <ranges>
+#include <filesystem>
 
 std::string BackupConfig::borgmaticConfigFile() const { return pathToConfig.string(); }
 
@@ -16,7 +17,11 @@ bool BackupConfig::isBackupPurging() const { return purgeFlag; }
 void BackupConfig::isBackupPurging(bool state) { purgeFlag = state; }
 
 std::vector<backup::helper::ListItem> BackupConfig::list() {
-  auto jsonList = runSimpleBorgmaticCommandOnConfig("list");
+  if (!isAccessible()) {
+    return {};
+  }
+
+  auto jsonList = std::get<0>(runSimpleBorgmaticCommandOnConfig("list"));
 
   std::vector<backup::helper::ListItem> result;
   std::ranges::transform(
@@ -26,16 +31,28 @@ std::vector<backup::helper::ListItem> BackupConfig::list() {
 }
 
 backup::helper::Info BackupConfig::info() {
-  using namespace backup::helper;
-  auto jsonInfo = runSimpleBorgmaticCommandOnConfig("info")[0];
-  Info info;
-  info.id = safeJsonAccess<std::string>([&jsonInfo]() -> auto { return jsonInfo["repository"]["id"]; });
-  info.location = safeJsonAccess<std::string>([&jsonInfo]() -> auto { return jsonInfo["repository"]["location"]; });
-  info.originalSize =
-      safeJsonAccess<std::uint64_t>([&jsonInfo]() -> auto { return jsonInfo["cache"]["stats"]["total_size"]; });
-  info.compressedSize =
-      safeJsonAccess<std::uint64_t>([&jsonInfo]() { return jsonInfo["cache"]["stats"]["total_csize"]; });
-  return info;
+  if (!info_) {
+    using namespace backup::helper;
+    auto infoResult = runSimpleBorgmaticCommandOnConfig("info");
+    Info info;
+    if (auto jsonInfo = std::get_if<nlohmann::json>(&infoResult)) {
+      info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto { return (*jsonInfo)[0]["repository"]["id"]; });
+      info.location =
+          safeJsonAccess<std::string>([jsonInfo]() -> auto { return (*jsonInfo)[0]["repository"]["location"]; });
+      info.originalSize = safeJsonAccess<std::uint64_t>([jsonInfo]() -> auto {
+        return (*jsonInfo)[0]["cache"]["stats"]["total_size"];
+      });
+      info.compressedSize =
+          safeJsonAccess<std::uint64_t>([jsonInfo]() { return (*jsonInfo)[0]["cache"]["stats"]["total_csize"]; });
+    } else {
+      auto errorLines = std::get<1>(infoResult);
+      std::vector<std::string> parts;
+      boost::split(parts, errorLines[0], [](auto c) { return c == ' '; });
+      info.location = parts[1];
+    }
+    info_ = info;
+  }
+  return info_.value();
 }
 
 void BackupConfig::startBackup(std::function<void()> onFinished,
@@ -44,14 +61,33 @@ void BackupConfig::startBackup(std::function<void()> onFinished,
 }
 
 void BackupConfig::cancelBackup() { worker.cancel(); }
-nlohmann::json BackupConfig::runSimpleBorgmaticCommandOnConfig(std::string const& action) const {
-  namespace bp = boost::process;
-  bp::ipstream output;
-  bp::child process("/usr/bin/borgmatic", action, "--json", "-c", pathToConfig.string(), bp::std_out > output);
 
+std::variant<nlohmann::json, std::vector<std::string>> BackupConfig::runSimpleBorgmaticCommandOnConfig(
+    std::string const& action) const {
+  namespace bp = boost::process;
+  bp::ipstream output, errorOutput;
+  auto code = bp::system("/usr/bin/borgmatic", action, "--json", "-c", pathToConfig.string(), bp::std_out > output,
+                         bp::std_err > errorOutput);
+
+  if (code) {
+    spdlog::info("borgmatic {} failed: {}", action, code);
+    std::vector<std::string> collectedOutput;
+    std::string line;
+    while (std::getline(errorOutput, line)) {
+      collectedOutput.push_back(line);
+    }
+    return collectedOutput;
+  }
   nlohmann::json jsonList;
   output >> jsonList;
-  process.wait();
   spdlog::debug(jsonList.dump(4));
   return jsonList;
+}
+
+bool BackupConfig::isAccessible() {
+  auto backupInfo = info();
+  if (backupInfo.location.starts_with("ssh:")) {
+    return true;
+  }
+  return std::filesystem::exists(backupInfo.location);
 }
