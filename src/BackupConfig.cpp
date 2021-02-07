@@ -32,6 +32,10 @@ std::vector<backup::helper::ListItem> BackupConfig::list() {
 
 backup::helper::Info BackupConfig::info() {
   if (!info_) {
+    if (pathToConfig.empty()) {
+      spdlog::info("skipping borgmatic info due to unknown config");
+      return {};
+    }
     using namespace backup::helper;
     auto infoResult = runSimpleBorgmaticCommandOnConfig("info");
     Info info;

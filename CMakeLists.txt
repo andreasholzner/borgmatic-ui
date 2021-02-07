@@ -28,7 +28,6 @@ set(HEADERS
 set(SRC
         src/MainWindow.cpp
         src/ConfigTab.cpp
-        src/main.cpp
         src/BackupConfig.cpp
         src/BorgmaticManager.cpp
         src/BackupListModel.cpp
@@ -38,7 +37,7 @@ set(UIS
         ui/mainwindow.ui
         ui/tabContent.ui)
 
-add_executable(${PROJECT_NAME}
+add_executable(${PROJECT_NAME} src/main.cpp
         ${UIS}
         ${HEADERS}
         ${SRC})
@@ -49,3 +48,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt5::Core Qt5::Widgets cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+
+include(CTest)
+if (BUILD_TESTING)
+    add_subdirectory(test)
+endif ()
