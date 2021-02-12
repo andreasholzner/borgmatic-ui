@@ -8,21 +8,28 @@
 
 static char const *const SETTINGS_KEY = "backup_configs";
 
-std::shared_ptr<BackupConfig> BorgmaticManager::newBorgmaticConfig() {
-  std::shared_ptr<BackupConfig> newConfig = std::make_shared<BackupConfig>();
-  configs.push_back(newConfig);
-  return newConfig;
+std::shared_ptr<BackupConfig> BorgmaticManagerImpl::newBorgmaticConfig() {
+  auto newConfig = std::make_shared<BackupConfigImpl>();
+  configs_.push_back(newConfig);
+  return std::static_pointer_cast<BackupConfig>(newConfig);
 }
 
-void BorgmaticManager::removeConfig(int index) { configs.erase(configs.cbegin() + index); }
+void BorgmaticManagerImpl::removeConfig(int index) { configs_.erase(configs_.cbegin() + index); }
 
-std::string BorgmaticManager::store() {
+std::vector<std::shared_ptr<BackupConfig>> BorgmaticManagerImpl::configs() {
+  std::vector<std::shared_ptr<BackupConfig>> res{configs_.size()};
+  std::transform(configs_.begin(), configs_.end(), res.begin(),
+                 [](std::shared_ptr<BackupConfigImpl> c) { return std::static_pointer_cast<BackupConfig>(c); });
+  return res;
+}
+
+std::string BorgmaticManagerImpl::store() {
   std::stringstream ss;
   serialize(ss);
   return ss.str();
 }
 
-void BorgmaticManager::loadSettings() {
+void BorgmaticManagerImpl::loadSettings() {
   QSettings settings;
   spdlog::info("Loading backup settings");
   auto backupConfigs = settings.value(SETTINGS_KEY);
@@ -33,19 +40,18 @@ void BorgmaticManager::loadSettings() {
   }
 }
 
-void BorgmaticManager::saveSettings() {
+void BorgmaticManagerImpl::saveSettings() {
   QSettings settings;
   spdlog::info("Saving backup settings");
   settings.setValue(SETTINGS_KEY, QString(store().c_str()));
 }
 
-void BorgmaticManager::load(std::string const &data) {
+void BorgmaticManagerImpl::load(std::string const &data) {
   std::stringstream ss(data);
   cereal::JSONInputArchive archive(ss);
-  archive(configs);
+  archive(configs_);
 }
-
-void BorgmaticManager::serialize(std::stringstream &archiveStream) {
+void BorgmaticManagerImpl::serialize(std::stringstream &archiveStream) {
   cereal::JSONOutputArchive archive(archiveStream);
-  archive(configs);
+  archive(configs_);
 }

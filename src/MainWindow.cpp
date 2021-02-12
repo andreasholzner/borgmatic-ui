@@ -15,7 +15,7 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* paren
     : QMainWindow(parent), ui(new Ui::MainWindow), borgmaticManager(std::move(manager)) {
   ui->setupUi(this);
   ui->borgmaticTabWidget->clear();
-  for (auto&& config : borgmaticManager->configs) {
+  for (auto&& config : borgmaticManager->configs()) {
     addTabForConfig(config);
   }
   readWindowSettings();

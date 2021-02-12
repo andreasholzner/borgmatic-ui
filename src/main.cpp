@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setOrganizationName("holzner");
   QCoreApplication::setApplicationName("borgmatic-ui");
 
-  auto borgmaticManager = std::make_unique<BorgmaticManager>();
+  auto borgmaticManager = std::make_unique<BorgmaticManagerImpl>();
   borgmaticManager->loadSettings();
   MainWindow w(std::move(borgmaticManager));
   w.show();

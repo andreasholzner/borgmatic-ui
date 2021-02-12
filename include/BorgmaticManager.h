@@ -8,17 +8,28 @@
 
 class BorgmaticManager {
  public:
-  std::shared_ptr<BackupConfig> newBorgmaticConfig();
-  void removeConfig(int index);
-  void loadSettings();
-  void saveSettings();
+  virtual ~BorgmaticManager() = default;
+  virtual std::shared_ptr<BackupConfig> newBorgmaticConfig() = 0;
+  virtual void removeConfig(int index) = 0;
+  virtual void loadSettings() = 0;
+  virtual void saveSettings() = 0;
+  virtual std::vector<std::shared_ptr<BackupConfig>> configs() = 0;
+};
 
-  std::vector<std::shared_ptr<BackupConfig>> configs;
+class BorgmaticManagerImpl : public BorgmaticManager {
+ public:
+  std::shared_ptr<BackupConfig> newBorgmaticConfig() override;
+  void removeConfig(int index) override;
+  std::vector<std::shared_ptr<BackupConfig>> configs() override;
+  void loadSettings() override;
+  void saveSettings() override;
 
  private:
   std::string store();
   void load(const std::string&);
   void serialize(std::stringstream&);
+
+  std::vector<std::shared_ptr<BackupConfigImpl>> configs_;
 };
 
 #endif  // BORGMATIC_UI_BORGMATICMANAGER_H

@@ -44,17 +44,33 @@ T safeJsonAccess(std::function<T()> input, T defaultValue = T()) {
 
 class BackupConfig {
  public:
-  std::string borgmaticConfigFile() const;
-  bool isBackupPurging() const;
-  void isBackupPurging(bool state);
-  void borgmaticConfigFile(std::string const&);
-  std::vector<backup::helper::ListItem> list();
-  backup::helper::Info info();
+  virtual ~BackupConfig() = default;
+  virtual std::string borgmaticConfigFile() const = 0;
+  virtual void borgmaticConfigFile(std::string const&) = 0;
+  virtual bool isBackupPurging() const = 0;
+  virtual void isBackupPurging(bool state) = 0;
+  virtual std::vector<backup::helper::ListItem> list() = 0;
+  virtual backup::helper::Info info() = 0;
+  virtual void startBackup(
+      std::function<void()> onFinished,
+      std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) = 0;
+  virtual void cancelBackup() = 0;
+  virtual bool isAccessible() = 0;
+};
+
+class BackupConfigImpl : public BackupConfig {
+ public:
+  std::string borgmaticConfigFile() const override;
+  bool isBackupPurging() const override;
+  void isBackupPurging(bool state) override;
+  void borgmaticConfigFile(std::string const&) override;
+  std::vector<backup::helper::ListItem> list() override;
+  backup::helper::Info info() override;
   void startBackup(
       std::function<void()> onFinished,
-      std::function<void(std::string)> const& outputHandler = [](std::string const&) {});
-  void cancelBackup();
-  bool isAccessible();
+      std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) override;
+  void cancelBackup() override;
+  bool isAccessible() override;
 
   template <typename Archive>
   void save(Archive& ar) const {

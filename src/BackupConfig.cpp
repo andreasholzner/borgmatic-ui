@@ -7,16 +7,16 @@
 #include <boost/process.hpp>
 #include <filesystem>
 
-std::string BackupConfig::borgmaticConfigFile() const { return pathToConfig.string(); }
+std::string BackupConfigImpl::borgmaticConfigFile() const { return pathToConfig.string(); }
 
-void BackupConfig::borgmaticConfigFile(std::string const& configFile) {
+void BackupConfigImpl::borgmaticConfigFile(std::string const& configFile) {
   pathToConfig = std::filesystem::path(configFile);
 }
 
-bool BackupConfig::isBackupPurging() const { return purgeFlag; }
-void BackupConfig::isBackupPurging(bool state) { purgeFlag = state; }
+bool BackupConfigImpl::isBackupPurging() const { return purgeFlag; }
+void BackupConfigImpl::isBackupPurging(bool state) { purgeFlag = state; }
 
-std::vector<backup::helper::ListItem> BackupConfig::list() {
+std::vector<backup::helper::ListItem> BackupConfigImpl::list() {
   if (!isAccessible()) {
     return {};
   }
@@ -30,7 +30,7 @@ std::vector<backup::helper::ListItem> BackupConfig::list() {
   return result;
 }
 
-backup::helper::Info BackupConfig::info() {
+backup::helper::Info BackupConfigImpl::info() {
   if (!info_) {
     if (pathToConfig.empty()) {
       spdlog::info("skipping borgmatic info due to unknown config");
@@ -59,14 +59,14 @@ backup::helper::Info BackupConfig::info() {
   return info_.value();
 }
 
-void BackupConfig::startBackup(std::function<void()> onFinished,
-                               std::function<void(std::string)> const& outputHandler) {
+void BackupConfigImpl::startBackup(std::function<void()> onFinished,
+                                   std::function<void(std::string)> const& outputHandler) {
   worker.start(std::move(onFinished), outputHandler);
 }
 
-void BackupConfig::cancelBackup() { worker.cancel(); }
+void BackupConfigImpl::cancelBackup() { worker.cancel(); }
 
-std::variant<nlohmann::json, std::vector<std::string>> BackupConfig::runSimpleBorgmaticCommandOnConfig(
+std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl::runSimpleBorgmaticCommandOnConfig(
     std::string const& action) const {
   namespace bp = boost::process;
   bp::ipstream output, errorOutput;
@@ -88,7 +88,7 @@ std::variant<nlohmann::json, std::vector<std::string>> BackupConfig::runSimpleBo
   return jsonList;
 }
 
-bool BackupConfig::isAccessible() {
+bool BackupConfigImpl::isAccessible() {
   auto backupInfo = info();
   if (backupInfo.location.starts_with("ssh:")) {
     return true;
