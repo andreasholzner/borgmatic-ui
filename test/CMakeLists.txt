@@ -20,10 +20,12 @@ set(CMAKE_AUTORCC ON)
 list(TRANSFORM SRC PREPEND "../" OUTPUT_VARIABLE MAIN_SRC)
 list(TRANSFORM HEADERS PREPEND "../" OUTPUT_VARIABLE MAIN_HEADERS)
 list(TRANSFORM UIS PREPEND "../" OUTPUT_VARIABLE MAIN_UIS)
-
-add_executable(borgmatic_test test_main.cpp
-        ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS}
-        testMainWindow.cpp)
+set(TESTS
+        testMainWindow.cpp
+        testBorgmaticManager.cpp)
+add_executable(borgmatic_test
+        test_main.cpp ${TESTS}
+        ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS})
 set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)
 target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt5::Test trompeloeil
