@@ -21,7 +21,7 @@ TEST_CASE("BorgmaticManager", "[logic]") {
     REQUIRE(borgmaticManager->configs().size() == 2);
   }
 
-  SECTION("removeConfig removes config entry") {
+  SECTION("removeConfig removes config entry safely") {
     auto config1 = borgmaticManager->newBorgmaticConfig();
     config1->borgmaticConfigFile("name1");
     auto config2 = borgmaticManager->newBorgmaticConfig();
@@ -31,6 +31,11 @@ TEST_CASE("BorgmaticManager", "[logic]") {
 
     REQUIRE(borgmaticManager->configs().size() == 1);
     REQUIRE(borgmaticManager->configs()[0]->borgmaticConfigFile() == config2->borgmaticConfigFile());
+
+    borgmaticManager->removeConfig(1);
+    REQUIRE(borgmaticManager->configs().size() == 1);
+    borgmaticManager->removeConfig(-1);
+    REQUIRE(borgmaticManager->configs().size() == 1);
   }
 
   SECTION("can be saved and read from settings") {

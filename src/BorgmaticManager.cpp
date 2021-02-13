@@ -14,7 +14,13 @@ std::shared_ptr<BackupConfig> BorgmaticManagerImpl::newBorgmaticConfig() {
   return std::static_pointer_cast<BackupConfig>(newConfig);
 }
 
-void BorgmaticManagerImpl::removeConfig(int index) { configs_.erase(configs_.cbegin() + index); }
+void BorgmaticManagerImpl::removeConfig(int index) {
+  if (index < configs_.size()) {
+    configs_.erase(configs_.cbegin() + index);
+  } else {
+    spdlog::warn("Trying to remove non-existing config at index {} when size is {}", index, configs_.size());
+  }
+}
 
 std::vector<std::shared_ptr<BackupConfig>> BorgmaticManagerImpl::configs() {
   std::vector<std::shared_ptr<BackupConfig>> res{configs_.size()};
