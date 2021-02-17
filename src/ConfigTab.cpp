@@ -12,7 +12,7 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config, QWidget *parent)
   ui->backupsTableView->setModel(backupTableModel);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
-  updateFromBackupConfig();
+  ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
 
   connect(ui->backupsTableView->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
           &ConfigTab::tableRowChanged);
@@ -24,7 +24,14 @@ ConfigTab::~ConfigTab() {
 }
 
 void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
+  auto tabWidget = getTabWidget();
+  if (tabWidget) {
+    auto index = tabWidget->indexOf(this);
+    tabWidget->setTabText(index, QFileInfo(fileName).baseName());
+  }
+
   backupConfig->borgmaticConfigFile(fileName.toStdString());
+  updateFromBackupConfig();
 }
 
 void ConfigTab::on_configEditFileButton_clicked() {
@@ -33,11 +40,7 @@ void ConfigTab::on_configEditFileButton_clicked() {
   auto selectedFile =
       QFileDialog::getOpenFileName(this, "Borgmatic Config", defaultPath.absolutePath(), "YAML Files (*.yaml *.yml)");
   if (!selectedFile.isEmpty()) {
-    backupConfig->borgmaticConfigFile(selectedFile.toStdString());
-    auto tabWidget = getTabWidget();
-    auto index = tabWidget->indexOf(this);
-    tabWidget->setTabText(index, QFileInfo(selectedFile).baseName());
-    updateFromBackupConfig();
+    ui->configEdit->setText(selectedFile);
   }
 }
 
@@ -92,10 +95,11 @@ void ConfigTab::backupFinished() {
   spdlog::debug("Backup is done");
 }
 
-QTabWidget *ConfigTab::getTabWidget() const { return qobject_cast<QTabWidget *>(parentWidget()->parentWidget()); }
+QTabWidget *ConfigTab::getTabWidget() const {
+  return parentWidget() ? qobject_cast<QTabWidget *>(parentWidget()->parentWidget()) : nullptr;
+}
 
 void ConfigTab::updateFromBackupConfig() {
-  ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
   ui->purgeCheckBox->setCheckState(backupConfig->isBackupPurging() ? Qt::CheckState::Checked
                                                                    : Qt::CheckState::Unchecked);
   auto info = backupConfig->info();

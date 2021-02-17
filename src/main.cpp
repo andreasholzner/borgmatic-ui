@@ -8,15 +8,15 @@
 
 int main(int argc, char *argv[]) {
   spdlog::set_level(spdlog::level::debug);
-  QApplication a(argc, argv);
+  QApplication app(argc, argv);
 
   QCoreApplication::setOrganizationName("holzner");
   QCoreApplication::setApplicationName("borgmatic-ui");
 
   auto borgmaticManager = std::make_unique<BorgmaticManagerImpl>();
   borgmaticManager->loadSettings();
-  MainWindow w(std::move(borgmaticManager));
-  w.show();
+  MainWindow window(std::move(borgmaticManager));
+  window.show();
 
-  return a.exec();
+  return app.exec();
 }
