@@ -23,7 +23,8 @@ list(TRANSFORM UIS PREPEND "../" OUTPUT_VARIABLE MAIN_UIS)
 set(TESTS
         testMainWindow.cpp
         testConfigTab.cpp
-        testBorgmaticManager.cpp)
+        testBorgmaticManager.cpp
+        testBackupConfig.cpp)
 add_executable(borgmatic_test
         test_main.cpp ${TESTS}
         ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS})

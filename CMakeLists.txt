@@ -21,6 +21,7 @@ set(HEADERS
         include/MainWindow.h
         include/ConfigTab.h
         include/BackupConfig.h
+        include/BackupConfig.inc
         include/BorgmaticManager.h
         include/BackupListModel.h
         include/BackupWorker.h)
@@ -28,7 +29,6 @@ set(HEADERS
 set(SRC
         src/MainWindow.cpp
         src/ConfigTab.cpp
-        src/BackupConfig.cpp
         src/BorgmaticManager.cpp
         src/BackupListModel.cpp
         src/BackupWorker.cpp)

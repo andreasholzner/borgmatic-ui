@@ -1,5 +1,3 @@
-#include "BackupConfig.h"
-
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -7,16 +5,27 @@
 #include <boost/process.hpp>
 #include <filesystem>
 
-std::string BackupConfigImpl::borgmaticConfigFile() const { return pathToConfig.string(); }
+template <Worker W>
+std::string BackupConfigImpl<W>::borgmaticConfigFile() const {
+  return pathToConfig.string();
+}
 
-void BackupConfigImpl::borgmaticConfigFile(std::string const& configFile) {
+template <Worker W>
+void BackupConfigImpl<W>::borgmaticConfigFile(std::string const& configFile) {
   pathToConfig = std::filesystem::path(configFile);
 }
 
-bool BackupConfigImpl::isBackupPurging() const { return purgeFlag; }
-void BackupConfigImpl::isBackupPurging(bool state) { purgeFlag = state; }
+template <Worker W>
+bool BackupConfigImpl<W>::isBackupPurging() const {
+  return purgeFlag;
+}
+template <Worker W>
+void BackupConfigImpl<W>::isBackupPurging(bool state) {
+  purgeFlag = state;
+}
 
-std::vector<backup::helper::ListItem> BackupConfigImpl::list() {
+template <Worker W>
+std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {
   if (!isAccessible()) {
     return {};
   }
@@ -30,7 +39,8 @@ std::vector<backup::helper::ListItem> BackupConfigImpl::list() {
   return result;
 }
 
-backup::helper::Info BackupConfigImpl::info() {
+template <Worker W>
+backup::helper::Info BackupConfigImpl<W>::info() {
   if (!info_) {
     if (pathToConfig.empty()) {
       spdlog::info("skipping borgmatic info due to unknown config");
@@ -59,14 +69,23 @@ backup::helper::Info BackupConfigImpl::info() {
   return info_.value();
 }
 
-void BackupConfigImpl::startBackup(std::function<void()> onFinished,
-                                   std::function<void(std::string)> const& outputHandler) {
-  worker.start(std::move(onFinished), outputHandler);
+template <Worker W>
+void BackupConfigImpl<W>::startBackup(std::function<void()> onFinished,
+                                      std::function<void(std::string)> const& outputHandler) {
+  // TODO hand down config filename and purge flag
+  worker.start(std::move(onFinished), [outputHandler](std::string line) {
+    spdlog::debug(line);
+    outputHandler(line);
+  });
 }
 
-void BackupConfigImpl::cancelBackup() { worker.cancel(); }
+template <Worker W>
+void BackupConfigImpl<W>::cancelBackup() {
+  worker.cancel();
+}
 
-std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl::runSimpleBorgmaticCommandOnConfig(
+template <Worker W>
+std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(
     std::string const& action) const {
   namespace bp = boost::process;
   bp::ipstream output, errorOutput;
@@ -88,7 +107,8 @@ std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl::runSimp
   return jsonList;
 }
 
-bool BackupConfigImpl::isAccessible() {
+template <Worker W>
+bool BackupConfigImpl<W>::isAccessible() {
   auto backupInfo = info();
   if (backupInfo.location.starts_with("ssh:")) {
     return true;

@@ -40,6 +40,9 @@ T safeJsonAccess(std::function<T()> input, T defaultValue = T()) {
   }
   return result;
 }
+
+constexpr void handler() {}
+constexpr void logHandler(std::string const& msg) {}
 }  // namespace backup::helper
 
 class BackupConfig {
@@ -58,6 +61,13 @@ class BackupConfig {
   virtual bool isAccessible() = 0;
 };
 
+template <class T>
+concept Worker = requires(T w) {
+  w.start(&backup::helper::handler, &backup::helper::logHandler);
+  w.cancel();
+};
+
+template <Worker W>
 class BackupConfigImpl : public BackupConfig {
  public:
   std::string borgmaticConfigFile() const override;
@@ -89,8 +99,10 @@ class BackupConfigImpl : public BackupConfig {
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;
-  BackupWorker worker;
+  W worker;
   std::optional<backup::helper::Info> info_;
 };
+
+#include "BackupConfig.inc"
 
 #endif  // BORGMATIC_UI_BACKUPCONFIG_H

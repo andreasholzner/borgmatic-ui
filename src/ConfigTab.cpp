@@ -93,6 +93,8 @@ void ConfigTab::tableRowChanged(const QModelIndex &current, const QModelIndex &p
 void ConfigTab::backupFinished() {
   emit setStatusMessage("Backup is done", 30000);
   spdlog::debug("Backup is done");
+  ui->startBackupButton->setEnabled(true);
+  ui->cancelBackupButton->setDisabled(true);
 }
 
 QTabWidget *ConfigTab::getTabWidget() const {

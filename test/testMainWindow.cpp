@@ -1,4 +1,5 @@
 #include <QAction>
+#include <QPushButton>
 #include <QTabWidget>
 #include <QtTest>
 #include <catch2/catch.hpp>
@@ -8,7 +9,10 @@
 
 #include "BackupConfig.h"
 #include "BorgmaticManager.h"
+#include "ConfigTab.h"
 #include "MainWindow.h"
+
+using namespace trompeloeil;
 
 class BorgmaticManagerMock : public trompeloeil::mock_interface<BorgmaticManager> {
   IMPLEMENT_MOCK0(newBorgmaticConfig);
@@ -21,7 +25,7 @@ class BorgmaticManagerMock : public trompeloeil::mock_interface<BorgmaticManager
 std::vector<std::shared_ptr<BackupConfig>> prepareConfigs(std::vector<std::string> const &configNames) {
   std::vector<std::shared_ptr<BackupConfig>> res{configNames.size()};
   std::transform(configNames.begin(), configNames.end(), res.begin(), [](std::string const &configName) {
-    auto backupConfig = std::make_shared<BackupConfigImpl>();
+    auto backupConfig = std::make_shared<BackupConfigImpl<BackupWorker>>();
     backupConfig->borgmaticConfigFile(configName);
     return std::static_pointer_cast<BackupConfig>(backupConfig);
   });
@@ -49,11 +53,26 @@ TEST_CASE("MainWindow", "[ui]") {
     auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
     REQUIRE(tabWidget->count() == 0);
 
-    REQUIRE_CALL(*manager, newBorgmaticConfig()).RETURN(std::make_shared<BackupConfigImpl>());
+    REQUIRE_CALL(*manager, newBorgmaticConfig()).RETURN(std::make_shared<BackupConfigImpl<BackupWorker>>());
 
     mainWindow.findChild<QAction *>("menuNew")->trigger();
 
     REQUIRE(tabWidget->count() == 1);
     REQUIRE(tabWidget->tabText(0) == QString{});
+  }
+
+  SECTION("Delete config button removes the active tab") {
+    REQUIRE_CALL(*manager, configs()).RETURN(prepareConfigs({"name1", "name2"}));
+    auto mainWindow = MainWindow{std::move(uniqueManager)};
+
+    int tabIndexToDelete = 0;
+    REQUIRE_CALL(*manager, removeConfig(eq(tabIndexToDelete)));
+    auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
+    tabWidget->setCurrentIndex(tabIndexToDelete);
+    auto currentTab = qobject_cast<ConfigTab *>(tabWidget->currentWidget());
+    currentTab->findChild<QPushButton *>("deleteConfigButton")->click();
+
+    REQUIRE(tabWidget->count() == 1);
+    REQUIRE(tabWidget->tabText(0) == QString{"name2"});
   }
 }

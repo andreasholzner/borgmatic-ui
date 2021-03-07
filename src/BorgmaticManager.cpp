@@ -9,7 +9,7 @@
 static char const *const SETTINGS_KEY = "backup_configs";
 
 std::shared_ptr<BackupConfig> BorgmaticManagerImpl::newBorgmaticConfig() {
-  auto newConfig = std::make_shared<BackupConfigImpl>();
+  auto newConfig = std::make_shared<BackupConfigImpl<BackupWorker>>();
   configs_.push_back(newConfig);
   return std::static_pointer_cast<BackupConfig>(newConfig);
 }
@@ -24,8 +24,9 @@ void BorgmaticManagerImpl::removeConfig(int index) {
 
 std::vector<std::shared_ptr<BackupConfig>> BorgmaticManagerImpl::configs() {
   std::vector<std::shared_ptr<BackupConfig>> res{configs_.size()};
-  std::transform(configs_.begin(), configs_.end(), res.begin(),
-                 [](std::shared_ptr<BackupConfigImpl> c) { return std::static_pointer_cast<BackupConfig>(c); });
+  std::transform(configs_.begin(), configs_.end(), res.begin(), [](std::shared_ptr<BackupConfigImpl<BackupWorker>> c) {
+    return std::static_pointer_cast<BackupConfig>(c);
+  });
   return res;
 }
 

@@ -1,5 +1,7 @@
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QString>
 #include <QTableView>
 #include <QtTest>
@@ -53,6 +55,9 @@ TEST_CASE("ConfigTab construction", "[ui]") {
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
     auto configTab = ConfigTab{config};
+    REQUIRE(configTab.findChild<QCheckBox *>("purgeCheckBox")->isEnabled() == true);
+    REQUIRE(configTab.findChild<QPushButton *>("startBackupButton")->isEnabled() == true);
+    REQUIRE(configTab.findChild<QPushButton *>("cancelBackupButton")->isEnabled() == false);
 
     // data from info
     REQUIRE(configTab.findChild<QLineEdit *>("configEdit")->text().toStdString() == configFileName);
@@ -67,7 +72,7 @@ TEST_CASE("ConfigTab construction", "[ui]") {
   }
 }
 
-TEST_CASE("ConfigTab", "[ui") {
+TEST_CASE("ConfigTab", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
   std::shared_ptr<ConfigTab> configTab = nullptr;
   {
@@ -87,5 +92,41 @@ TEST_CASE("ConfigTab", "[ui") {
     ALLOW_CALL(*config, isBackupPurging(eq(1)));
 
     configTab->findChild<QLineEdit *>("configEdit")->setText(newBorgmaticConfig.c_str());
+  }
+
+  SECTION("start backup button") {
+    auto startButton = configTab->findChild<QPushButton *>("startBackupButton");
+    auto cancelButton = configTab->findChild<QPushButton *>("cancelBackupButton");
+    REQUIRE(startButton->isEnabled() == true);
+    REQUIRE(cancelButton->isEnabled() == false);
+
+    std::function<void()> usedFinishedHandler;
+    REQUIRE_CALL(*config, startBackup(_, _)).LR_SIDE_EFFECT(usedFinishedHandler = _1);
+    startButton->click();
+
+    REQUIRE(startButton->isEnabled() == false);
+    REQUIRE(cancelButton->isEnabled() == true);
+
+    usedFinishedHandler();
+    REQUIRE(startButton->isEnabled() == true);
+    REQUIRE(cancelButton->isEnabled() == false);
+  }
+
+  SECTION("cancel backup button") {
+    auto startButton = configTab->findChild<QPushButton *>("startBackupButton");
+    auto cancelButton = configTab->findChild<QPushButton *>("cancelBackupButton");
+    REQUIRE(startButton->isEnabled() == true);
+    REQUIRE(cancelButton->isEnabled() == false);
+
+    REQUIRE_CALL(*config, startBackup(_, _));
+    startButton->click();
+
+    REQUIRE(startButton->isEnabled() == false);
+    REQUIRE(cancelButton->isEnabled() == true);
+
+    REQUIRE_CALL(*config, cancelBackup());
+    cancelButton->click();
+    REQUIRE(startButton->isEnabled() == true);
+    REQUIRE(cancelButton->isEnabled() == false);
   }
 }
