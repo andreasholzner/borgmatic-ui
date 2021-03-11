@@ -24,14 +24,14 @@ set(HEADERS
         include/BackupConfig.inc
         include/BorgmaticManager.h
         include/BackupListModel.h
-        include/BackupWorker.h)
+        include/BorgmaticBackupWorker.h)
 
 set(SRC
         src/MainWindow.cpp
         src/ConfigTab.cpp
         src/BorgmaticManager.cpp
         src/BackupListModel.cpp
-        src/BackupWorker.cpp)
+        src/BorgmaticBackupWorker.cpp)
 
 set(UIS
         ui/mainwindow.ui

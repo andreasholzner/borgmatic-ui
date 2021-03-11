@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-#include "BackupWorker.h"
+#include "BorgmaticBackupWorker.h"
 
 namespace backup::helper {
 struct ListItem {
@@ -63,6 +63,7 @@ class BackupConfig {
 
 template <class T>
 concept Worker = requires(T w) {
+  w.configure(std::filesystem::path{}, true);
   w.start(&backup::helper::handler, &backup::helper::logHandler);
   w.cancel();
 };

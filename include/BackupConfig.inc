@@ -72,7 +72,7 @@ backup::helper::Info BackupConfigImpl<W>::info() {
 template <Worker W>
 void BackupConfigImpl<W>::startBackup(std::function<void()> onFinished,
                                       std::function<void(std::string)> const& outputHandler) {
-  // TODO hand down config filename and purge flag
+  worker.configure(pathToConfig, purgeFlag);
   worker.start(std::move(onFinished), [outputHandler](std::string line) {
     spdlog::debug(line);
     outputHandler(line);

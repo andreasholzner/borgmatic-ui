@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "BackupConfig.h"
-#include "BackupWorker.h"
+#include "BorgmaticBackupWorker.h"
 
 class BorgmaticManager {
  public:
@@ -30,7 +30,7 @@ class BorgmaticManagerImpl : public BorgmaticManager {
   void load(const std::string&);
   void serialize(std::stringstream&);
 
-  std::vector<std::shared_ptr<BackupConfigImpl<BackupWorker>>> configs_;
+  std::vector<std::shared_ptr<BackupConfigImpl<BorgmaticBackupWorker>>> configs_;
 };
 
 #endif  // BORGMATIC_UI_BORGMATICMANAGER_H

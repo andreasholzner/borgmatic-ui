@@ -7,6 +7,7 @@
 using namespace trompeloeil;
 
 struct BackupWorkerMockImpl {
+  MAKE_MOCK2(configure, void(std::filesystem::path, bool));
   MAKE_MOCK2(start, void(std::function<void()>, std::function<void(std::string)>));
   MAKE_MOCK0(cancel, void());
 };
@@ -14,6 +15,7 @@ struct BackupWorkerMockImpl {
 BackupWorkerMockImpl workerMock;
 
 struct BackupWorkerMock {
+  void configure(std::filesystem::path pathToConfig, bool purgeFlag) { workerMock.configure(pathToConfig, purgeFlag); }
   void start(std::function<void()> onFinished, std::function<void(std::string)> logHandler) {
     workerMock.start(onFinished, logHandler);
   }
@@ -29,8 +31,14 @@ TEST_CASE("BackupConfig", "[logic]") {
     backupConfig.cancelBackup();
   }
 
-  SECTION("startBackup calls start on worker") {
+  SECTION("startBackup configures worker and calls start on worker") {
+    std::filesystem::path configPath{"/tmp/test.yml"};
+    bool purgeFlag = true;
+    REQUIRE_CALL(workerMock, configure(eq(configPath), eq(purgeFlag)));
     REQUIRE_CALL(workerMock, start(_, _));
+
+    backupConfig.borgmaticConfigFile(configPath.string());
+    backupConfig.isBackupPurging(purgeFlag);
 
     backupConfig.startBackup([]() {});
   }
