@@ -94,7 +94,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     configTab->findChild<QLineEdit *>("configEdit")->setText(newBorgmaticConfig.c_str());
   }
 
-  SECTION("start backup button") {
+  SECTION("start backup button starts a backup, refreshes ui after completion") {
     auto startButton = configTab->findChild<QPushButton *>("startBackupButton");
     auto cancelButton = configTab->findChild<QPushButton *>("cancelBackupButton");
     REQUIRE(startButton->isEnabled() == true);
@@ -102,17 +102,23 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     std::function<void()> usedFinishedHandler;
     REQUIRE_CALL(*config, startBackup(_, _)).LR_SIDE_EFFECT(usedFinishedHandler = _1);
+
     startButton->click();
 
     REQUIRE(startButton->isEnabled() == false);
     REQUIRE(cancelButton->isEnabled() == true);
 
+    ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
+    REQUIRE_CALL(*config, list()).RETURN(prepareList());
+
     usedFinishedHandler();
+
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
   }
 
-  SECTION("cancel backup button") {
+  SECTION("cancel backup button cancels a running backup and refreshes the ui") {
     auto startButton = configTab->findChild<QPushButton *>("startBackupButton");
     auto cancelButton = configTab->findChild<QPushButton *>("cancelBackupButton");
     REQUIRE(startButton->isEnabled() == true);
@@ -125,7 +131,12 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(cancelButton->isEnabled() == true);
 
     REQUIRE_CALL(*config, cancelBackup());
+    ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
+    REQUIRE_CALL(*config, list()).RETURN(prepareList());
+
     cancelButton->click();
+
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
   }

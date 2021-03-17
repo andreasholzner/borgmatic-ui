@@ -55,6 +55,7 @@ void ConfigTab::on_startBackupButton_clicked() {
 
 void ConfigTab::on_cancelBackupButton_clicked() {
   backupConfig->cancelBackup();
+  updateFromBackupConfig();
   ui->startBackupButton->setEnabled(true);
   ui->cancelBackupButton->setEnabled(false);
 }
@@ -93,6 +94,7 @@ void ConfigTab::tableRowChanged(const QModelIndex &current, const QModelIndex &p
 void ConfigTab::backupFinished() {
   emit setStatusMessage("Backup is done", 30000);
   spdlog::debug("Backup is done");
+  updateFromBackupConfig();
   ui->startBackupButton->setEnabled(true);
   ui->cancelBackupButton->setDisabled(true);
 }
