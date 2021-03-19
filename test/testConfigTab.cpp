@@ -13,6 +13,7 @@
 
 #include "BackupConfig.h"
 #include "ConfigTab.h"
+#include "FileDialogWrapper.h"
 
 using namespace trompeloeil;
 
@@ -26,6 +27,11 @@ class BackupConfigMock : public mock_interface<BackupConfig> {
   IMPLEMENT_MOCK2(startBackup);
   IMPLEMENT_MOCK0(cancelBackup);
   IMPLEMENT_MOCK0(isAccessible);
+};
+
+struct FileDialogWrapperMock : public mock_interface<FileDialogWrapper> {
+  IMPLEMENT_MOCK1(selectBorgmaticConfigFile);
+  IMPLEMENT_MOCK1(selectMountPoint);
 };
 
 auto prepareInfo() {
@@ -45,6 +51,7 @@ auto prepareList() {
 
 TEST_CASE("ConfigTab construction", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
+  std::shared_ptr<FileDialogWrapper> wrapperMock{std::make_shared<FileDialogWrapperMock>()};
   std::string configFileName{"file1"};
 
   SECTION("initializes all displayed data from BackupConfig via info and list") {
@@ -54,7 +61,7 @@ TEST_CASE("ConfigTab construction", "[ui]") {
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
-    auto configTab = ConfigTab{config};
+    auto configTab = ConfigTab{config, wrapperMock};
     REQUIRE(configTab.findChild<QCheckBox *>("purgeCheckBox")->isEnabled() == true);
     REQUIRE(configTab.findChild<QPushButton *>("startBackupButton")->isEnabled() == true);
     REQUIRE(configTab.findChild<QPushButton *>("cancelBackupButton")->isEnabled() == false);
@@ -74,13 +81,14 @@ TEST_CASE("ConfigTab construction", "[ui]") {
 
 TEST_CASE("ConfigTab", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
+  std::shared_ptr<FileDialogWrapper> wrapperMock{std::make_shared<FileDialogWrapperMock>()};
   std::shared_ptr<ConfigTab> configTab = nullptr;
   {
     ALLOW_CALL(*config, borgmaticConfigFile()).RETURN("");
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
     ALLOW_CALL(*config, info()).RETURN(prepareInfo());
     ALLOW_CALL(*config, list()).RETURN(prepareList());
-    configTab = std::make_shared<ConfigTab>(config);
+    configTab = std::make_shared<ConfigTab>(config, wrapperMock);
   }
 
   SECTION("new borgmatic config fetches info and list data") {

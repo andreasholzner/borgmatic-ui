@@ -8,6 +8,7 @@
 
 #include "BackupConfig.h"
 #include "BackupListModel.h"
+#include "FileDialogWrapper.h"
 
 namespace Ui {
 class TabContent;
@@ -17,7 +18,8 @@ class ConfigTab : public QWidget {
   Q_OBJECT
 
  public:
-  ConfigTab(std::shared_ptr<BackupConfig> config, QWidget *parent = nullptr);
+  ConfigTab(std::shared_ptr<BackupConfig> config, std::shared_ptr<FileDialogWrapper> fileDialogWrapper,
+            QWidget *parent = nullptr);
 
   ~ConfigTab() override;
 
@@ -44,6 +46,7 @@ class ConfigTab : public QWidget {
   Ui::TabContent *ui;
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
+  std::shared_ptr<FileDialogWrapper> file_dialog_wrapper_;
   QString currentMountPath;
 };
 

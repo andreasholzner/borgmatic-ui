@@ -1,13 +1,17 @@
 #include "ConfigTab.h"
 
-#include <QFileDialog>
 #include <QLocale>
 #include <QThread>
 
 #include "ui_tabContent.h"
 
-ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config, QWidget *parent)
-    : QWidget(parent), ui(new Ui::TabContent), backupTableModel(new BackupListModel), backupConfig(config) {
+ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config, std::shared_ptr<FileDialogWrapper> fileDialogWrapper,
+                     QWidget *parent)
+    : QWidget(parent),
+      ui(new Ui::TabContent),
+      backupTableModel(new BackupListModel),
+      backupConfig(config),
+      file_dialog_wrapper_(fileDialogWrapper) {
   ui->setupUi(this);
   ui->backupsTableView->setModel(backupTableModel);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
@@ -35,10 +39,7 @@ void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
 }
 
 void ConfigTab::on_configEditFileButton_clicked() {
-  auto defaultPath = QDir::home();
-  defaultPath.cd(".config/borgmatic");
-  auto selectedFile =
-      QFileDialog::getOpenFileName(this, "Borgmatic Config", defaultPath.absolutePath(), "YAML Files (*.yaml *.yml)");
+  auto selectedFile = file_dialog_wrapper_->selectBorgmaticConfigFile(this);
   if (!selectedFile.isEmpty()) {
     ui->configEdit->setText(selectedFile);
   }
@@ -69,7 +70,7 @@ void ConfigTab::on_backupMountButton_clicked() {
     spdlog::warn("MountButton used without valid selection.");
     return;
   }
-  auto dir = QFileDialog::getExistingDirectory(this, "Backup Mountpoint");
+  auto dir = file_dialog_wrapper_->selectMountPoint(this);
   if (dir.isEmpty()) {
     spdlog::warn("Invalid directory selected as mount point.");
     return;
