@@ -95,10 +95,8 @@ void ConfigTab::tableRowChanged(const QModelIndex &current, const QModelIndex &p
   if (ui->backupsTableView->selectionModel()->hasSelection()) {
     spdlog::debug("row changed. new row: {}", current.row());
     ui->backupMountButton->setEnabled(true);
-    ui->backupDeleteButton->setEnabled(true);
   } else {
     ui->backupMountButton->setDisabled(true);
-    ui->backupDeleteButton->setDisabled(true);
   }
 }
 

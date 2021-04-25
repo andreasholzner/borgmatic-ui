@@ -144,7 +144,8 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="media-mount"/>
+        <iconset theme="media-mount">
+         <normaloff>.</normaloff>.</iconset>
        </property>
       </widget>
      </item>
@@ -198,7 +199,8 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="media-eject"/>
+        <iconset theme="media-eject">
+         <normaloff>.</normaloff>.</iconset>
        </property>
       </widget>
      </item>
@@ -267,7 +269,8 @@
         <string>Cancel Backup</string>
        </property>
        <property name="icon">
-        <iconset theme="process-stop"/>
+        <iconset theme="process-stop">
+         <normaloff>.</normaloff>.</iconset>
        </property>
       </widget>
      </item>
@@ -313,7 +316,8 @@
         <string>Delete Config</string>
        </property>
        <property name="icon">
-        <iconset theme="document-close"/>
+        <iconset theme="document-close">
+         <normaloff>.</normaloff>.</iconset>
        </property>
       </widget>
      </item>
@@ -377,25 +381,6 @@
        </property>
        <property name="tristate">
         <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="backupDeleteButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>150</width>
-         <height>43</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Delete Backup</string>
-       </property>
-       <property name="icon">
-        <iconset theme="edit-delete"/>
        </property>
       </widget>
      </item>
