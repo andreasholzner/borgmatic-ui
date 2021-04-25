@@ -26,6 +26,7 @@ class ConfigTab : public QWidget {
  private slots:
   void on_configEdit_textChanged(QString const &fileName);
   void on_configEditFileButton_clicked();
+  void on_configShowFileButton_clicked();
   void on_startBackupButton_clicked();
   void on_cancelBackupButton_clicked();
   void on_deleteConfigButton_clicked();

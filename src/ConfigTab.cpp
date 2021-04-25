@@ -1,7 +1,11 @@
 #include "ConfigTab.h"
 
+#include <spdlog/spdlog.h>
+
+#include <QDesktopServices>
 #include <QLocale>
-#include <QThread>
+#include <QString>
+#include <QUrl>
 
 #include "ui_tabContent.h"
 
@@ -43,6 +47,12 @@ void ConfigTab::on_configEditFileButton_clicked() {
   if (!selectedFile.isEmpty()) {
     ui->configEdit->setText(selectedFile);
   }
+}
+
+void ConfigTab::on_configShowFileButton_clicked() {
+  auto selectedFile = backupConfig->borgmaticConfigFile();
+  spdlog::debug("Opening config file '{}' in default editor...", selectedFile);
+  QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(selectedFile)));
 }
 
 void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
