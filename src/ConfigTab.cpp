@@ -22,8 +22,8 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config, std::shared_ptr<FileD
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
   ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
 
-  connect(ui->backupsTableView->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
-          &ConfigTab::tableRowChanged);
+  connect(ui->backupsTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+          &ConfigTab::tableSelectionChanged);
 }
 
 ConfigTab::~ConfigTab() {
@@ -87,13 +87,20 @@ void ConfigTab::on_backupMountButton_clicked() {
   }
   auto backupName = backupTableModel->rowData(ui->backupsTableView->selectionModel()->currentIndex().row()).name;
   spdlog::debug("selected backup name: {}", backupName);
+
+  backupConfig->mountArchive(backupName, dir.toStdString());
 }
 
-void ConfigTab::on_backupUmountButton_clicked() {}
+void ConfigTab::on_backupUmountButton_clicked() {
+  if (!isRowSelected()) {
+    spdlog::warn("UmountButton used without valid selection.");
+    return;
+  }
+}
 
-void ConfigTab::tableRowChanged(const QModelIndex &current, const QModelIndex &previous) {
+void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous) {
   if (ui->backupsTableView->selectionModel()->hasSelection()) {
-    spdlog::debug("row changed. new row: {}", current.row());
+    spdlog::debug("row changed. new row: {}", ui->backupsTableView->selectionModel()->currentIndex().row());
     ui->backupMountButton->setEnabled(true);
   } else {
     ui->backupMountButton->setDisabled(true);

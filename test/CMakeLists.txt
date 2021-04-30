@@ -24,7 +24,8 @@ set(TESTS
         testMainWindow.cpp
         testConfigTab.cpp
         testBorgmaticManager.cpp
-        testBackupConfig.cpp)
+        testBackupConfig.cpp
+        testBackupListModel.cpp)
 add_executable(borgmatic_test
         test_main.cpp ${TESTS}
         ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS})

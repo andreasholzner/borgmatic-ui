@@ -18,6 +18,9 @@ struct ListItem {
   std::string id;
   std::string name;
   std::string start;
+  bool is_mounted;
+
+  bool operator==(ListItem const&) const = default;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ListItem, id, name, start)
 
