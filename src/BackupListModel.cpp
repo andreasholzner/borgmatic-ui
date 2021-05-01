@@ -1,5 +1,7 @@
 #include "BackupListModel.h"
 
+#include <spdlog/spdlog.h>
+
 #include <QBrush>
 #include <QColor>
 #include <QDateTime>
@@ -54,4 +56,14 @@ void BackupListModel::updateBackups(std::vector<backup::helper::ListItem> const 
   endResetModel();
 }
 
-backup::helper::ListItem const &BackupListModel::rowData(int row) const { return backups.at(row); }
+backup::helper::ListItem const &BackupListModel::rowData(size_t row) const { return backups.at(row); }
+
+void BackupListModel::setMountInfos(size_t row, bool is_mounted, const std::string &mount_point) {
+  if (row > backups.size()) {
+    spdlog::warn("Trying to update mount data: row index out of range: {}.", row);
+    return;
+  }
+  backups.at(row).is_mounted = is_mounted;
+  backups.at(row).mount_path = mount_point;
+  emit dataChanged(index(row, 0), index(row, 1));
+}

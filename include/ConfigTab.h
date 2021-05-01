@@ -33,7 +33,7 @@ class ConfigTab : public QWidget {
   void on_purgeCheckBox_stateChanged(int state);
   void on_backupMountButton_clicked();
   void on_backupUmountButton_clicked();
-  void tableRowChanged(QModelIndex const &current, QModelIndex const &previous);
+  void tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous);
   void backupFinished();
 
  signals:
@@ -43,12 +43,12 @@ class ConfigTab : public QWidget {
  private:
   QTabWidget *getTabWidget() const;
   void updateFromBackupConfig();
+  bool isRowSelected() const;
 
   Ui::TabContent *ui;
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
   std::shared_ptr<FileDialogWrapper> file_dialog_wrapper_;
-  QString currentMountPath;
 };
 
 #endif  // BORGMATIC_UI_CONFIGTAB_H

@@ -19,7 +19,12 @@ struct ListItem {
   std::string name;
   std::string start;
   bool is_mounted;
+  std::string mount_path;
 
+  ListItem() : id(), name(), start(), is_mounted(false), mount_path() {}
+  ListItem(std::string const& id_, std::string const& name_, std::string const& start_, bool is_mounted_ = false,
+           std::string const& mount_path_ = "")
+      : id(id_), name(name_), start(start_), is_mounted(is_mounted_), mount_path(mount_path_) {}
   bool operator==(ListItem const&) const = default;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ListItem, id, name, start)
@@ -30,7 +35,7 @@ struct Info {
   std::int64_t originalSize;
   std::int64_t compressedSize;
 
-  Info() : id(""), location(""), originalSize(0), compressedSize(0) {}
+  Info() : id(), location(), originalSize(0), compressedSize(0) {}
 };
 
 template <typename T>
@@ -61,6 +66,8 @@ class BackupConfig {
       std::function<void()> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) = 0;
   virtual void cancelBackup() = 0;
+  virtual void mountArchive(std::string const& archiveName, std::string const& mountPoint) = 0;
+  virtual void umountArchive(std::string const& mountPoint) = 0;
   virtual bool isAccessible() = 0;
 };
 
@@ -84,6 +91,8 @@ class BackupConfigImpl : public BackupConfig {
       std::function<void()> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) override;
   void cancelBackup() override;
+  void mountArchive(std::string const& archiveName, std::string const& mountPoint) override;
+  void umountArchive(std::string const& mountPoint) override;
   bool isAccessible() override;
 
   template <typename Archive>
@@ -98,8 +107,10 @@ class BackupConfigImpl : public BackupConfig {
   }
 
  private:
-  std::variant<nlohmann::json, std::vector<std::string>> runSimpleBorgmaticCommandOnConfig(
+  std::variant<nlohmann::json, std::vector<std::string>> runSimpleBorgmaticCommandWithJsonOutputOnConfig(
       std::string const& action) const;
+  template <typename... Arg>
+  void runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const;
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;

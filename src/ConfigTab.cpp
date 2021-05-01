@@ -76,19 +76,23 @@ void ConfigTab::on_purgeCheckBox_stateChanged(int state) {
 }
 
 void ConfigTab::on_backupMountButton_clicked() {
-  if (!ui->backupsTableView->selectionModel()->hasSelection()) {
+  if (!isRowSelected()) {
     spdlog::warn("MountButton used without valid selection.");
     return;
   }
   auto dir = file_dialog_wrapper_->selectMountPoint(this);
   if (dir.isEmpty()) {
     spdlog::warn("Invalid directory selected as mount point.");
+    ui->backupsTableView->selectionModel()->clearSelection();
     return;
   }
-  auto backupName = backupTableModel->rowData(ui->backupsTableView->selectionModel()->currentIndex().row()).name;
-  spdlog::debug("selected backup name: {}", backupName);
+  size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
+  auto backupName = backupTableModel->rowData(row).name;
+  spdlog::debug("Mounting archive {} to mount point {}", backupName, dir.toStdString());
 
   backupConfig->mountArchive(backupName, dir.toStdString());
+  ui->backupsTableView->selectionModel()->clearSelection();
+  backupTableModel->setMountInfos(row, true, dir.toStdString());
 }
 
 void ConfigTab::on_backupUmountButton_clicked() {
@@ -96,14 +100,25 @@ void ConfigTab::on_backupUmountButton_clicked() {
     spdlog::warn("UmountButton used without valid selection.");
     return;
   }
+  size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
+  auto mountPoint = backupTableModel->rowData(row).mount_path;
+  spdlog::debug("Umounting mount point: {}", mountPoint);
+
+  backupConfig->umountArchive(mountPoint);
+  ui->backupsTableView->selectionModel()->clearSelection();
+  backupTableModel->setMountInfos(row, false, "");
 }
 
 void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous) {
   if (ui->backupsTableView->selectionModel()->hasSelection()) {
-    spdlog::debug("row changed. new row: {}", ui->backupsTableView->selectionModel()->currentIndex().row());
-    ui->backupMountButton->setEnabled(true);
+    size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
+    spdlog::trace("row changed. new row: {}", row);
+    bool is_row_mounted = backupTableModel->rowData(row).is_mounted;
+    ui->backupMountButton->setEnabled(!is_row_mounted);
+    ui->backupUmountButton->setEnabled(is_row_mounted);
   } else {
     ui->backupMountButton->setDisabled(true);
+    ui->backupUmountButton->setDisabled(true);
   }
 }
 
@@ -130,3 +145,5 @@ void ConfigTab::updateFromBackupConfig() {
 
   backupTableModel->updateBackups(backupConfig->list());
 }
+
+bool ConfigTab::isRowSelected() const { return ui->backupsTableView->selectionModel()->hasSelection(); }

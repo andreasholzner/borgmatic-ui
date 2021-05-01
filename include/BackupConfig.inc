@@ -30,7 +30,7 @@ std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {
     return {};
   }
 
-  auto jsonList = std::get<0>(runSimpleBorgmaticCommandOnConfig("list"));
+  auto jsonList = std::get<0>(runSimpleBorgmaticCommandWithJsonOutputOnConfig("list"));
 
   std::vector<backup::helper::ListItem> result;
   std::ranges::transform(
@@ -47,7 +47,7 @@ backup::helper::Info BackupConfigImpl<W>::info() {
       return {};
     }
     using namespace backup::helper;
-    auto infoResult = runSimpleBorgmaticCommandOnConfig("info");
+    auto infoResult = runSimpleBorgmaticCommandWithJsonOutputOnConfig("info");
     Info info;
     if (auto jsonInfo = std::get_if<nlohmann::json>(&infoResult)) {
       info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto { return (*jsonInfo)[0]["repository"]["id"]; });
@@ -85,8 +85,30 @@ void BackupConfigImpl<W>::cancelBackup() {
 }
 
 template <Worker W>
-std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(
-    std::string const& action) const {
+void BackupConfigImpl<W>::mountArchive(std::string const& archiveName, std::string const& mountPoint) {
+  if (archiveName.empty()) {
+    spdlog::error("Trying to mount unspecified archive!");
+    return;
+  }
+  if (mountPoint.empty()) {
+    spdlog::error("Trying to mount a archive without a mount point!");
+    return;
+  }
+  runSimpleBorgmaticCommandOnConfig("mount", "--archive", archiveName, "--mount-point", mountPoint);
+}
+
+template <Worker W>
+void BackupConfigImpl<W>::umountArchive(std::string const& mountPoint) {
+  if (mountPoint.empty()) {
+    spdlog::error("Trying to umount archive without a mount point!");
+    return;
+  }
+  runSimpleBorgmaticCommandOnConfig("umount", "--mount-point", mountPoint);
+}
+
+template <Worker W>
+std::variant<nlohmann::json, std::vector<std::string>>
+BackupConfigImpl<W>::runSimpleBorgmaticCommandWithJsonOutputOnConfig(std::string const& action) const {
   namespace bp = boost::process;
   bp::ipstream output, errorOutput;
   auto code = bp::system("/usr/bin/borgmatic", action, "--json", "-c", pathToConfig.string(), bp::std_out > output,
@@ -105,6 +127,26 @@ std::variant<nlohmann::json, std::vector<std::string>> BackupConfigImpl<W>::runS
   output >> jsonList;
   spdlog::debug(jsonList.dump(4));
   return jsonList;
+}
+
+template <Worker W>
+template <typename... Arg>
+void BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const {
+  namespace bp = boost::process;
+  bp::ipstream output, errorOutput;
+  auto code = bp::system("/usr/bin/borgmatic", action, "-c", pathToConfig.string(), args..., bp::std_out > output,
+                         bp::std_err > errorOutput);
+
+  if (code) {
+    spdlog::warn("borgmatic {} failed: {}", action, code);
+  }
+  std::string line;
+  while (std::getline(output, line)) {
+    spdlog::info("[borgmatic {} stdout]: {}", action, line);
+  }
+  while (std::getline(errorOutput, line)) {
+    spdlog::warn("[borgmatic {} stderr]: {}", action, line);
+  }
 }
 
 template <Worker W>

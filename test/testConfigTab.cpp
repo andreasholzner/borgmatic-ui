@@ -27,6 +27,8 @@ class BackupConfigMock : public mock_interface<BackupConfig> {
   IMPLEMENT_MOCK2(startBackup);
   IMPLEMENT_MOCK0(cancelBackup);
   IMPLEMENT_MOCK0(isAccessible);
+  IMPLEMENT_MOCK2(mountArchive);
+  IMPLEMENT_MOCK1(umountArchive);
 };
 
 struct FileDialogWrapperMock : public mock_interface<FileDialogWrapper> {
@@ -43,10 +45,8 @@ auto prepareInfo() {
 }
 
 auto prepareList() {
-  return std::vector<backup::helper::ListItem>{
-      {"id1", "name1", "2000-10-05 10:15:30.500"},
-      {"id2", "name2", "2000-10-06 10:15:30.500"}
-  };
+  return std::vector<backup::helper::ListItem>{{"id1", "name1", "2000-10-05 10:15:30.500", false},
+                                               {"id2", "name2", "2000-10-06 10:15:30.500", true}};
 }
 
 TEST_CASE("ConfigTab construction", "[ui]") {
@@ -81,10 +81,11 @@ TEST_CASE("ConfigTab construction", "[ui]") {
 
 TEST_CASE("ConfigTab", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
-  std::shared_ptr<FileDialogWrapper> wrapperMock{std::make_shared<FileDialogWrapperMock>()};
+  auto wrapperMock = std::make_shared<FileDialogWrapperMock>();
   std::shared_ptr<ConfigTab> configTab = nullptr;
   {
-    ALLOW_CALL(*config, borgmaticConfigFile()).RETURN("");
+    ALLOW_CALL(*config, borgmaticConfigFile()).RETURN(std::string("file"));
+    ALLOW_CALL(*config, borgmaticConfigFile(_));
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
     ALLOW_CALL(*config, info()).RETURN(prepareInfo());
     ALLOW_CALL(*config, list()).RETURN(prepareList());
@@ -147,5 +148,60 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
+  }
+
+  SECTION("mount and umount button") {
+    auto mountButton = configTab->findChild<QPushButton *>("backupMountButton");
+    auto umountButton = configTab->findChild<QPushButton *>("backupUmountButton");
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    std::string mountPoint = "some_directory";
+    REQUIRE(mountButton->isEnabled() == false);
+
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    QItemSelectionModel *selectionModel = backupsTable->selectionModel();
+    size_t row = 0;
+    backupsTable->selectRow(row);
+    REQUIRE(mountButton->isEnabled() == true);
+    REQUIRE(umountButton->isEnabled() == false);
+
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
+    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint)));
+    mountButton->click();
+
+    REQUIRE(selectionModel->hasSelection() == false);
+    REQUIRE(model->rowData(row).is_mounted == true);
+    REQUIRE(model->rowData(row).mount_path == mountPoint);
+
+    backupsTable->selectRow(row);
+    REQUIRE(mountButton->isEnabled() == false);
+    REQUIRE(umountButton->isEnabled() == true);
+
+    REQUIRE_CALL(*config, umountArchive(eq(mountPoint)));
+    umountButton->click();
+
+    REQUIRE(selectionModel->hasSelection() == false);
+    REQUIRE(model->rowData(row).is_mounted == false);
+    REQUIRE(model->rowData(row).mount_path == "");
+  }
+
+  SECTION("mount button but no mount point selected") {
+    auto mountButton = configTab->findChild<QPushButton *>("backupMountButton");
+    auto umountButton = configTab->findChild<QPushButton *>("backupUmountButton");
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    REQUIRE(mountButton->isEnabled() == false);
+
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    QItemSelectionModel *selectionModel = backupsTable->selectionModel();
+    size_t row = 0;
+    backupsTable->selectRow(row);
+    REQUIRE(mountButton->isEnabled() == true);
+    REQUIRE(umountButton->isEnabled() == false);
+
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString());
+    mountButton->click();
+
+    REQUIRE(selectionModel->hasSelection() == false);
+    REQUIRE(model->rowData(row).is_mounted == false);
+    REQUIRE(model->rowData(row).mount_path == "");
   }
 }

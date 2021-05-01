@@ -17,7 +17,8 @@ class BackupListModel : public QAbstractTableModel {
   int rowCount(QModelIndex const &parent = QModelIndex()) const override;
   int columnCount(QModelIndex const &parent = QModelIndex()) const override;
   void updateBackups(std::vector<backup::helper::ListItem> const &data);
-  backup::helper::ListItem const &rowData(int row) const;
+  backup::helper::ListItem const &rowData(size_t row) const;
+  void setMountInfos(size_t row, bool is_mounted, std::string const &mount_point);
 
  private:
   std::vector<backup::helper::ListItem> backups;

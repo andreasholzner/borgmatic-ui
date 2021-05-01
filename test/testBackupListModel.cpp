@@ -31,15 +31,11 @@ TEST_CASE("BackupListModel static properties", "[logic]") {
 
 TEST_CASE("BackupListModel dynamic properties", "[logic]") {
   BackupListModel model;
-  std::vector<backup::helper::ListItem> modelData{
-      {"id1", "name1", "2000-10-05 10:15:30.500", false},
-      {"id2", "name2", "2000-10-06 10:15:30.500", true}
-  };
+  std::vector<backup::helper::ListItem> modelData{{"id1", "name1", "2000-10-05 10:15:30.500", false},
+                                                  {"id2", "name2", "2000-10-06 10:15:30.500", true, "/some/dir"}};
   model.updateBackups(modelData);
 
-  SECTION("row count") {
-    REQUIRE(model.rowCount() == modelData.size());
-  }
+  SECTION("row count") { REQUIRE(model.rowCount() == modelData.size()); }
 
   SECTION("data") {
     REQUIRE(model.data(model.index(0, 0), Qt::DisplayRole) == QVariant(modelData[0].name.c_str()));
@@ -59,6 +55,18 @@ TEST_CASE("BackupListModel dynamic properties", "[logic]") {
     REQUIRE(model.rowData(0) == modelData[0]);
     REQUIRE(model.rowData(1) == modelData[1]);
   }
+
+  SECTION("setMountInfos") {
+    model.setMountInfos(0, true, "mount_point");
+
+    REQUIRE(model.rowData(0).is_mounted == true);
+    REQUIRE(model.rowData(0).mount_path == "mount_point");
+
+    model.setMountInfos(1, false, "");
+
+    REQUIRE(model.rowData(1).is_mounted == false);
+    REQUIRE(model.rowData(1).mount_path == "");
+  }
 }
 
 TEST_CASE("BackupListModel update behavior", "[logic]") {
@@ -66,13 +74,25 @@ TEST_CASE("BackupListModel update behavior", "[logic]") {
 
   SECTION("updateBackups emits modelReset") {
     QSignalSpy spy{&model, &QAbstractItemModel::modelReset};
-    std::vector<backup::helper::ListItem> modelData{
-        {"id1", "name1", "2000-10-05 10:15:30.500", false},
-        {"id2", "name2", "2000-10-06 10:15:30.500", true}
-    };
+    std::vector<backup::helper::ListItem> modelData{{"id1", "name1", "2000-10-05 10:15:30.500", false},
+                                                    {"id2", "name2", "2000-10-06 10:15:30.500", true, "/some/dir"}};
 
     model.updateBackups(modelData);
 
     REQUIRE(spy.count() == 1);
+  }
+
+  SECTION("setMountInfos emits dataChanged for affected row") {
+    QSignalSpy spy{&model, &QAbstractItemModel::dataChanged};
+    std::vector<backup::helper::ListItem> modelData{{"id1", "name1", "2000-10-05 10:15:30.500", false},
+                                                    {"id2", "name2", "2000-10-06 10:15:30.500", true, "/some/dir"}};
+    model.updateBackups(modelData);
+
+    model.setMountInfos(1, true, "/other/mount/point");
+
+    REQUIRE(spy.count() == 1);
+    auto signalArguments = spy.takeFirst();
+    REQUIRE(signalArguments.at(0).toModelIndex() == model.index(1, 0));
+    REQUIRE(signalArguments.at(1).toModelIndex() == model.index(1, 1));
   }
 }
