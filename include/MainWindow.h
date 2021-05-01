@@ -7,7 +7,7 @@
 
 #include "BackupConfig.h"
 #include "BorgmaticManager.h"
-#include "FileDialogWrapper.h"
+#include "DesktopServicesWrapper.h"
 
 namespace Ui {
 class MainWindow;
@@ -36,7 +36,7 @@ class MainWindow : public QMainWindow {
 
   Ui::MainWindow *ui;
   std::unique_ptr<BorgmaticManager> borgmaticManager;
-  std::shared_ptr<FileDialogWrapper> file_dialog_wrapper_;
+  std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
 };
 
 #endif  // MAINWINDOW_H

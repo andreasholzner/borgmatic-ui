@@ -23,6 +23,14 @@ template <Worker W>
 void BackupConfigImpl<W>::isBackupPurging(bool state) {
   purgeFlag = state;
 }
+template <Worker W>
+bool BackupConfigImpl<W>::isMountPointToBeOpened() const {
+  return openMountFlag;
+}
+template <Worker W>
+void BackupConfigImpl<W>::isMountPointToBeOpened(bool state) {
+  openMountFlag = state;
+}
 
 template <Worker W>
 std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {

@@ -25,7 +25,7 @@ set(HEADERS
         include/BorgmaticManager.h
         include/BackupListModel.h
         include/BorgmaticBackupWorker.h
-        include/FileDialogWrapper.h)
+        include/DesktopServicesWrapper.h)
 
 set(SRC
         src/MainWindow.cpp

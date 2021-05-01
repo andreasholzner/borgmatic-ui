@@ -13,7 +13,7 @@
 
 #include "BackupConfig.h"
 #include "ConfigTab.h"
-#include "FileDialogWrapper.h"
+#include "DesktopServicesWrapper.h"
 
 using namespace trompeloeil;
 
@@ -22,6 +22,8 @@ class BackupConfigMock : public mock_interface<BackupConfig> {
   IMPLEMENT_CONST_MOCK0(borgmaticConfigFile);
   IMPLEMENT_MOCK1(isBackupPurging);
   IMPLEMENT_CONST_MOCK0(isBackupPurging);
+  IMPLEMENT_MOCK1(isMountPointToBeOpened);
+  IMPLEMENT_CONST_MOCK0(isMountPointToBeOpened);
   IMPLEMENT_MOCK0(list);
   IMPLEMENT_MOCK0(info);
   IMPLEMENT_MOCK2(startBackup);
@@ -31,9 +33,10 @@ class BackupConfigMock : public mock_interface<BackupConfig> {
   IMPLEMENT_MOCK1(umountArchive);
 };
 
-struct FileDialogWrapperMock : public mock_interface<FileDialogWrapper> {
+struct DesktopServicesWrapperMock : public mock_interface<DesktopServicesWrapper> {
   IMPLEMENT_MOCK1(selectBorgmaticConfigFile);
   IMPLEMENT_MOCK1(selectMountPoint);
+  IMPLEMENT_MOCK1(openLocation);
 };
 
 auto prepareInfo() {
@@ -51,18 +54,20 @@ auto prepareList() {
 
 TEST_CASE("ConfigTab construction", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
-  std::shared_ptr<FileDialogWrapper> wrapperMock{std::make_shared<FileDialogWrapperMock>()};
+  std::shared_ptr<DesktopServicesWrapper> wrapperMock{std::make_shared<DesktopServicesWrapperMock>()};
   std::string configFileName{"file1"};
 
   SECTION("initializes all displayed data from BackupConfig via info and list") {
     REQUIRE_CALL(*config, borgmaticConfigFile(eq(configFileName)));
     REQUIRE_CALL(*config, borgmaticConfigFile()).RETURN(configFileName);
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
     auto configTab = ConfigTab{config, wrapperMock};
     REQUIRE(configTab.findChild<QCheckBox *>("purgeCheckBox")->isEnabled() == true);
+    REQUIRE(configTab.findChild<QCheckBox *>("openMountPointCheckBox")->isEnabled() == true);
     REQUIRE(configTab.findChild<QPushButton *>("startBackupButton")->isEnabled() == true);
     REQUIRE(configTab.findChild<QPushButton *>("cancelBackupButton")->isEnabled() == false);
 
@@ -81,12 +86,13 @@ TEST_CASE("ConfigTab construction", "[ui]") {
 
 TEST_CASE("ConfigTab", "[ui]") {
   auto config = std::make_shared<BackupConfigMock>();
-  auto wrapperMock = std::make_shared<FileDialogWrapperMock>();
+  auto wrapperMock = std::make_shared<DesktopServicesWrapperMock>();
   std::shared_ptr<ConfigTab> configTab = nullptr;
   {
     ALLOW_CALL(*config, borgmaticConfigFile()).RETURN(std::string("file"));
     ALLOW_CALL(*config, borgmaticConfigFile(_));
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     ALLOW_CALL(*config, info()).RETURN(prepareInfo());
     ALLOW_CALL(*config, list()).RETURN(prepareList());
     configTab = std::make_shared<ConfigTab>(config, wrapperMock);
@@ -99,8 +105,17 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
     ALLOW_CALL(*config, isBackupPurging()).RETURN(true);
     ALLOW_CALL(*config, isBackupPurging(eq(1)));
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(true);
+    ALLOW_CALL(*config, isMountPointToBeOpened(eq(1)));
 
     configTab->findChild<QLineEdit *>("configEdit")->setText(newBorgmaticConfig.c_str());
+  }
+
+  SECTION("show config button opens borgmatic config file in a editor") {
+    std::string filename{"file"};
+    REQUIRE_CALL(*config, borgmaticConfigFile()).RETURN(filename);
+    REQUIRE_CALL(*wrapperMock, openLocation(QString::fromStdString(filename)));
+    configTab->findChild<QPushButton *>("configShowFileButton")->click();
   }
 
   SECTION("start backup button starts a backup, refreshes ui after completion") {
@@ -118,6 +133,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(cancelButton->isEnabled() == true);
 
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
@@ -141,6 +157,7 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE_CALL(*config, cancelBackup());
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
@@ -166,6 +183,8 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
     REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint)));
+    REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(true);
+    REQUIRE_CALL(*wrapperMock, openLocation(eq(QString::fromStdString(mountPoint))));
     mountButton->click();
 
     REQUIRE(selectionModel->hasSelection() == false);
@@ -181,7 +200,7 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == false);
-    REQUIRE(model->rowData(row).mount_path == "");
+    REQUIRE(model->rowData(row).mount_path.empty());
   }
 
   SECTION("mount button but no mount point selected") {
@@ -203,5 +222,19 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == false);
     REQUIRE(model->rowData(row).mount_path == "");
+  }
+
+  SECTION("mount button does not open directory with unchecked checkbox") {
+    auto mountButton = configTab->findChild<QPushButton *>("backupMountButton");
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    std::string mountPoint = "some_directory";
+    size_t row = 0;
+    backupsTable->selectRow(row);
+
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
+    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint)));
+    REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(false);
+    FORBID_CALL(*wrapperMock, openLocation(_));
+    mountButton->click();
   }
 }

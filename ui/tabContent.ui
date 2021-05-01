@@ -335,6 +335,13 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="2">
+      <widget class="QCheckBox" name="openMountPointCheckBox">
+       <property name="text">
+        <string>Open mounted directory</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>
@@ -348,6 +355,7 @@
   <tabstop>purgeCheckBox</tabstop>
   <tabstop>backupMountButton</tabstop>
   <tabstop>backupUmountButton</tabstop>
+  <tabstop>openMountPointCheckBox</tabstop>
   <tabstop>deleteConfigButton</tabstop>
  </tabstops>
  <resources/>

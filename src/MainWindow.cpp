@@ -15,7 +15,7 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* paren
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       borgmaticManager(std::move(manager)),
-      file_dialog_wrapper_(std::make_shared<FileDialogWrapperImpl>()) {
+      desktop_services_wrapper_(std::make_shared<DesktopServicesWrapperImpl>()) {
   ui->setupUi(this);
   ui->borgmaticTabWidget->clear();
   for (auto&& config : borgmaticManager->configs()) {
@@ -47,7 +47,7 @@ void MainWindow::deleteConfigTab(int index) {
 }
 
 void MainWindow::addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig) {
-  auto newTab = new ConfigTab(borgmaticConfig, file_dialog_wrapper_);
+  auto newTab = new ConfigTab(borgmaticConfig, desktop_services_wrapper_);
   QString label("");
   if (!borgmaticConfig->borgmaticConfigFile().empty()) {
     label = QFileInfo(borgmaticConfig->borgmaticConfigFile().c_str()).baseName();

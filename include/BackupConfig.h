@@ -60,6 +60,8 @@ class BackupConfig {
   virtual void borgmaticConfigFile(std::string const&) = 0;
   virtual bool isBackupPurging() const = 0;
   virtual void isBackupPurging(bool state) = 0;
+  virtual bool isMountPointToBeOpened() const = 0;
+  virtual void isMountPointToBeOpened(bool state) = 0;
   virtual std::vector<backup::helper::ListItem> list() = 0;
   virtual backup::helper::Info info() = 0;
   virtual void startBackup(
@@ -84,6 +86,8 @@ class BackupConfigImpl : public BackupConfig {
   std::string borgmaticConfigFile() const override;
   bool isBackupPurging() const override;
   void isBackupPurging(bool state) override;
+  bool isMountPointToBeOpened() const override;
+  void isMountPointToBeOpened(bool state) override;
   void borgmaticConfigFile(std::string const&) override;
   std::vector<backup::helper::ListItem> list() override;
   backup::helper::Info info() override;
@@ -97,12 +101,12 @@ class BackupConfigImpl : public BackupConfig {
 
   template <typename Archive>
   void save(Archive& ar) const {
-    ar(pathToConfig.string(), purgeFlag);
+    ar(pathToConfig.string(), purgeFlag, openMountFlag);
   }
   template <typename Archive>
   void load(Archive& ar) {
     std::string filePath;
-    ar(filePath, purgeFlag);
+    ar(filePath, purgeFlag, openMountFlag);
     pathToConfig = std::filesystem::path(filePath);
   }
 
@@ -114,6 +118,7 @@ class BackupConfigImpl : public BackupConfig {
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;
+  bool openMountFlag;
   W worker;
   std::optional<backup::helper::Info> info_;
 };

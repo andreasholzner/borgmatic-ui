@@ -9,13 +9,13 @@
 
 #include "ui_tabContent.h"
 
-ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config, std::shared_ptr<FileDialogWrapper> fileDialogWrapper,
-                     QWidget *parent)
+ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config,
+                     std::shared_ptr<DesktopServicesWrapper> desktopServicesWrapper, QWidget *parent)
     : QWidget(parent),
       ui(new Ui::TabContent),
       backupTableModel(new BackupListModel),
       backupConfig(config),
-      file_dialog_wrapper_(fileDialogWrapper) {
+      desktop_services_wrapper_(desktopServicesWrapper) {
   ui->setupUi(this);
   ui->backupsTableView->setModel(backupTableModel);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
@@ -43,7 +43,7 @@ void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
 }
 
 void ConfigTab::on_configEditFileButton_clicked() {
-  auto selectedFile = file_dialog_wrapper_->selectBorgmaticConfigFile(this);
+  auto selectedFile = desktop_services_wrapper_->selectBorgmaticConfigFile(this);
   if (!selectedFile.isEmpty()) {
     ui->configEdit->setText(selectedFile);
   }
@@ -52,7 +52,7 @@ void ConfigTab::on_configEditFileButton_clicked() {
 void ConfigTab::on_configShowFileButton_clicked() {
   auto selectedFile = backupConfig->borgmaticConfigFile();
   spdlog::debug("Opening config file '{}' in default editor...", selectedFile);
-  QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(selectedFile)));
+  desktop_services_wrapper_->openLocation(QString::fromStdString(selectedFile));
 }
 
 void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
@@ -75,12 +75,16 @@ void ConfigTab::on_purgeCheckBox_stateChanged(int state) {
   backupConfig->isBackupPurging(state == Qt::CheckState::Checked);
 }
 
+void ConfigTab::on_openMountPointCheckBox_stateChanged(int state) {
+  backupConfig->isMountPointToBeOpened(state == Qt::CheckState::Checked);
+}
+
 void ConfigTab::on_backupMountButton_clicked() {
   if (!isRowSelected()) {
     spdlog::warn("MountButton used without valid selection.");
     return;
   }
-  auto dir = file_dialog_wrapper_->selectMountPoint(this);
+  auto dir = desktop_services_wrapper_->selectMountPoint(this);
   if (dir.isEmpty()) {
     spdlog::warn("Invalid directory selected as mount point.");
     ui->backupsTableView->selectionModel()->clearSelection();
@@ -93,6 +97,10 @@ void ConfigTab::on_backupMountButton_clicked() {
   backupConfig->mountArchive(backupName, dir.toStdString());
   ui->backupsTableView->selectionModel()->clearSelection();
   backupTableModel->setMountInfos(row, true, dir.toStdString());
+
+  if (backupConfig->isMountPointToBeOpened()) {
+    desktop_services_wrapper_->openLocation(dir);
+  }
 }
 
 void ConfigTab::on_backupUmountButton_clicked() {
@@ -137,6 +145,8 @@ QTabWidget *ConfigTab::getTabWidget() const {
 void ConfigTab::updateFromBackupConfig() {
   ui->purgeCheckBox->setCheckState(backupConfig->isBackupPurging() ? Qt::CheckState::Checked
                                                                    : Qt::CheckState::Unchecked);
+  ui->openMountPointCheckBox->setCheckState(backupConfig->isMountPointToBeOpened() ? Qt::CheckState::Checked
+                                                                                   : Qt::CheckState::Unchecked);
   auto info = backupConfig->info();
   ui->infoLocationLabel->setText(info.location.c_str());
   QLocale locale;
