@@ -27,7 +27,7 @@ set(TESTS
         testBackupConfig.cpp
         testBackupListModel.cpp)
 add_executable(borgmatic_test
-        test_main.cpp ${TESTS}
+        test_main.cpp mocks.h ${TESTS}
         ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS})
 set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)

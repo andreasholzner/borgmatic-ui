@@ -117,6 +117,12 @@ void ConfigTab::on_backupUmountButton_clicked() {
   backupTableModel->setMountInfos(row, false, "");
 }
 
+void ConfigTab::onCurrentTabChanged(int index) {
+  if (getTabWidget()->indexOf(this) == index) {
+    updateFromBackupConfig();
+  }
+}
+
 void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous) {
   if (ui->backupsTableView->selectionModel()->hasSelection()) {
     size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();

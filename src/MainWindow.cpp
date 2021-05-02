@@ -55,6 +55,7 @@ void MainWindow::addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig) 
   ui->borgmaticTabWidget->addTab(newTab, label);
   connect(newTab, &ConfigTab::deleteTab, this, &MainWindow::deleteConfigTab);
   connect(newTab, &ConfigTab::setStatusMessage, ui->statusbar, &QStatusBar::showMessage);
+  connect(ui->borgmaticTabWidget, &QTabWidget::currentChanged, newTab, &ConfigTab::onCurrentTabChanged);
 }
 
 void MainWindow::readWindowSettings() {

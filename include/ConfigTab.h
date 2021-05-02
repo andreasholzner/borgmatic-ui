@@ -23,6 +23,9 @@ class ConfigTab : public QWidget {
 
   ~ConfigTab() override;
 
+ public slots:
+  void onCurrentTabChanged(int index);
+
  private slots:
   void on_configEdit_textChanged(QString const &fileName);
   void on_configEditFileButton_clicked();

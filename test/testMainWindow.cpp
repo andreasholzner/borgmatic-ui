@@ -11,16 +11,9 @@
 #include "BorgmaticManager.h"
 #include "ConfigTab.h"
 #include "MainWindow.h"
+#include "mocks.h"
 
 using namespace trompeloeil;
-
-class BorgmaticManagerMock : public trompeloeil::mock_interface<BorgmaticManager> {
-  IMPLEMENT_MOCK0(newBorgmaticConfig);
-  IMPLEMENT_MOCK1(removeConfig);
-  IMPLEMENT_MOCK0(loadSettings);
-  IMPLEMENT_MOCK0(saveSettings);
-  IMPLEMENT_MOCK0(configs);
-};
 
 std::vector<std::shared_ptr<BackupConfig>> prepareConfigs(std::vector<std::string> const &configNames) {
   std::vector<std::shared_ptr<BackupConfig>> res{configNames.size()};
@@ -28,6 +21,15 @@ std::vector<std::shared_ptr<BackupConfig>> prepareConfigs(std::vector<std::strin
     auto backupConfig = std::make_shared<BackupConfigImpl<BorgmaticBackupWorker>>();
     backupConfig->borgmaticConfigFile(configName);
     return std::static_pointer_cast<BackupConfig>(backupConfig);
+  });
+  return res;
+}
+
+std::vector<std::shared_ptr<BackupConfig>> prepareMockedConfigs(
+    std::initializer_list<std::shared_ptr<BackupConfigMock>> mocks) {
+  std::vector<std::shared_ptr<BackupConfig>> res{mocks.size()};
+  std::transform(mocks.begin(), mocks.end(), res.begin(), [](std::shared_ptr<BackupConfigMock> const &mock) {
+    return std::static_pointer_cast<BackupConfig>(mock);
   });
   return res;
 }
@@ -74,5 +76,32 @@ TEST_CASE("MainWindow", "[ui]") {
 
     REQUIRE(tabWidget->count() == 1);
     REQUIRE(tabWidget->tabText(0) == QString{"name2"});
+  }
+
+  SECTION("Updates the tab after a switch") {
+    auto config1 = std::make_shared<BackupConfigMock>();
+    auto config2 = std::make_shared<BackupConfigMock>();
+    auto mockConfigs = prepareMockedConfigs({config1, config2});
+    REQUIRE_CALL(*manager, configs()).RETURN(mockConfigs);
+    ALLOW_CALL(*config1, borgmaticConfigFile(_));
+    ALLOW_CALL(*config1, borgmaticConfigFile()).RETURN("name1");
+    ALLOW_CALL(*config1, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config1, isMountPointToBeOpened()).RETURN(false);
+    REQUIRE_CALL(*config1, info()).TIMES(1).RETURN(backup::helper::Info{});
+    REQUIRE_CALL(*config1, list()).TIMES(1).RETURN(std::vector<backup::helper::ListItem>{});
+
+    int const number_updates_tab2 = 2;
+    ALLOW_CALL(*config2, borgmaticConfigFile(_));
+    ALLOW_CALL(*config2, borgmaticConfigFile()).RETURN("name2");
+    ALLOW_CALL(*config2, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config2, isMountPointToBeOpened()).RETURN(false);
+    REQUIRE_CALL(*config2, info()).TIMES(number_updates_tab2).RETURN(backup::helper::Info{});
+    REQUIRE_CALL(*config2, list()).TIMES(number_updates_tab2).RETURN(std::vector<backup::helper::ListItem>{});
+
+    auto mainWindow = MainWindow{std::move(uniqueManager)};
+    auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
+    REQUIRE(tabWidget->currentIndex() == 0);
+
+    tabWidget->setCurrentIndex(1);
   }
 }

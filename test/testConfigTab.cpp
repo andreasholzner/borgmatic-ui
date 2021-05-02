@@ -14,30 +14,9 @@
 #include "BackupConfig.h"
 #include "ConfigTab.h"
 #include "DesktopServicesWrapper.h"
+#include "mocks.h"
 
 using namespace trompeloeil;
-
-class BackupConfigMock : public mock_interface<BackupConfig> {
-  IMPLEMENT_MOCK1(borgmaticConfigFile);
-  IMPLEMENT_CONST_MOCK0(borgmaticConfigFile);
-  IMPLEMENT_MOCK1(isBackupPurging);
-  IMPLEMENT_CONST_MOCK0(isBackupPurging);
-  IMPLEMENT_MOCK1(isMountPointToBeOpened);
-  IMPLEMENT_CONST_MOCK0(isMountPointToBeOpened);
-  IMPLEMENT_MOCK0(list);
-  IMPLEMENT_MOCK0(info);
-  IMPLEMENT_MOCK2(startBackup);
-  IMPLEMENT_MOCK0(cancelBackup);
-  IMPLEMENT_MOCK0(isAccessible);
-  IMPLEMENT_MOCK2(mountArchive);
-  IMPLEMENT_MOCK1(umountArchive);
-};
-
-struct DesktopServicesWrapperMock : public mock_interface<DesktopServicesWrapper> {
-  IMPLEMENT_MOCK1(selectBorgmaticConfigFile);
-  IMPLEMENT_MOCK1(selectMountPoint);
-  IMPLEMENT_MOCK1(openLocation);
-};
 
 auto prepareInfo() {
   backup::helper::Info info{};
