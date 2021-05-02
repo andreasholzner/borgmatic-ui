@@ -1,4 +1,5 @@
 #include <QAction>
+#include <QCoreApplication>
 #include <QPushButton>
 #include <QTabWidget>
 #include <QtTest>
@@ -8,10 +9,9 @@
 #include <vector>
 
 #include "BackupConfig.h"
-#include "BorgmaticManager.h"
 #include "ConfigTab.h"
 #include "MainWindow.h"
-#include "mocks.h"
+#include "test_helper.h"
 
 using namespace trompeloeil;
 
@@ -71,6 +71,8 @@ TEST_CASE("MainWindow", "[ui]") {
     REQUIRE_CALL(*manager, removeConfig(eq(tabIndexToDelete)));
     auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
     tabWidget->setCurrentIndex(tabIndexToDelete);
+    wait_for_qthreads_to_finish();
+    QApplication::processEvents();
     auto currentTab = qobject_cast<ConfigTab *>(tabWidget->currentWidget());
     currentTab->findChild<QPushButton *>("deleteConfigButton")->click();
 
@@ -99,9 +101,11 @@ TEST_CASE("MainWindow", "[ui]") {
     REQUIRE_CALL(*config2, list()).TIMES(number_updates_tab2).RETURN(std::vector<backup::helper::ListItem>{});
 
     auto mainWindow = MainWindow{std::move(uniqueManager)};
+    wait_for_qthreads_to_finish();
     auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
     REQUIRE(tabWidget->currentIndex() == 0);
 
     tabWidget->setCurrentIndex(1);
+    wait_for_qthreads_to_finish();
   }
 }

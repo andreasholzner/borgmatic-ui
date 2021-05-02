@@ -1,6 +1,7 @@
 #ifndef BORGMATIC_UI_CONFIGTAB_H
 #define BORGMATIC_UI_CONFIGTAB_H
 
+#include <QFuture>
 #include <QString>
 #include <QTabWidget>
 #include <QWidget>
@@ -39,6 +40,8 @@ class ConfigTab : public QWidget {
   void on_backupUmountButton_clicked();
   void tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous);
   void backupFinished();
+  void updateBackupInfos();
+  void updateBackupList();
 
  signals:
   void deleteTab(int index);
@@ -53,6 +56,10 @@ class ConfigTab : public QWidget {
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
   std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
+  QFuture<backup::helper::Info> info_future_;
+  QFutureWatcher<backup::helper::Info> info_watcher_;
+  QFuture<std::vector<backup::helper::ListItem>> list_future_;
+  QFutureWatcher<std::vector<backup::helper::ListItem>> list_watcher_;
 };
 
 #endif  // BORGMATIC_UI_CONFIGTAB_H

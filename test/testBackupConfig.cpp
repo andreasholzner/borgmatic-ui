@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "BackupConfig.h"
-#include "mocks.h"
+#include "test_helper.h"
 
 using namespace trompeloeil;
 

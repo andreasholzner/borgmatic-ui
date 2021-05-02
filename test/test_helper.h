@@ -1,12 +1,16 @@
-#ifndef BORGMATIC_UI_TEST_MOCKS_H_
-#define BORGMATIC_UI_TEST_MOCKS_H_
+#ifndef BORGMATIC_UI_TEST_TEST_HELPER_H_
+#define BORGMATIC_UI_TEST_TEST_HELPER_H_
+
+#include <spdlog/spdlog.h>
 
 #include <catch2/trompeloeil.hpp>
+#include <chrono>
 #include <filesystem>
 #include <string>
+#include <thread>
 
-#include "BorgmaticManager.h"
 #include "BackupConfig.h"
+#include "BorgmaticManager.h"
 #include "DesktopServicesWrapper.h"
 
 class BorgmaticManagerMock : public trompeloeil::mock_interface<BorgmaticManager> {
@@ -44,4 +48,15 @@ struct BackupWorkerMockImpl {
   MAKE_MOCK0(cancel, void());
 };
 
-#endif  // BORGMATIC_UI_TEST_MOCKS_H_
+static void wait_for_qthreads_to_finish() {
+  using namespace std::chrono_literals;
+  for (int i = 0; i != 1000; ++i) {
+    if (QThreadPool::globalInstance()->activeThreadCount() == 0) {
+      return;
+    }
+    std::this_thread::sleep_for(50ms);
+  }
+  spdlog::warn("Thread count did not decrease to 0 within waiting period.");
+}
+
+#endif  // BORGMATIC_UI_TEST_TEST_HELPER_H_

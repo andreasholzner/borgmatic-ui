@@ -1,4 +1,5 @@
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -14,7 +15,7 @@
 #include "BackupConfig.h"
 #include "ConfigTab.h"
 #include "DesktopServicesWrapper.h"
-#include "mocks.h"
+#include "test_helper.h"
 
 using namespace trompeloeil;
 
@@ -45,6 +46,9 @@ TEST_CASE("ConfigTab construction", "[ui]") {
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
     auto configTab = ConfigTab{config, wrapperMock};
+    wait_for_qthreads_to_finish();
+    QApplication::processEvents();
+
     REQUIRE(configTab.findChild<QCheckBox *>("purgeCheckBox")->isEnabled() == true);
     REQUIRE(configTab.findChild<QCheckBox *>("openMountPointCheckBox")->isEnabled() == true);
     REQUIRE(configTab.findChild<QPushButton *>("startBackupButton")->isEnabled() == true);
@@ -75,6 +79,8 @@ TEST_CASE("ConfigTab", "[ui]") {
     ALLOW_CALL(*config, info()).RETURN(prepareInfo());
     ALLOW_CALL(*config, list()).RETURN(prepareList());
     configTab = std::make_shared<ConfigTab>(config, wrapperMock);
+    wait_for_qthreads_to_finish();
+    QApplication::processEvents();
   }
 
   SECTION("new borgmatic config fetches info and list data") {
@@ -88,6 +94,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     ALLOW_CALL(*config, isMountPointToBeOpened(eq(1)));
 
     configTab->findChild<QLineEdit *>("configEdit")->setText(newBorgmaticConfig.c_str());
+    wait_for_qthreads_to_finish();
   }
 
   SECTION("show config button opens borgmatic config file in a editor") {
@@ -117,6 +124,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
     usedFinishedHandler();
+    wait_for_qthreads_to_finish();
 
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
@@ -141,6 +149,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
     cancelButton->click();
+    wait_for_qthreads_to_finish();
 
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
@@ -200,7 +209,7 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == false);
-    REQUIRE(model->rowData(row).mount_path == "");
+    REQUIRE(model->rowData(row).mount_path.empty());
   }
 
   SECTION("mount button does not open directory with unchecked checkbox") {

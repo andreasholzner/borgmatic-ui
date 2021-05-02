@@ -2,10 +2,10 @@
 
 #include <spdlog/spdlog.h>
 
-#include <QDesktopServices>
 #include <QLocale>
 #include <QString>
 #include <QUrl>
+#include <QtConcurrent/QtConcurrent>
 
 #include "ui_tabContent.h"
 
@@ -24,6 +24,9 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config,
 
   connect(ui->backupsTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
           &ConfigTab::tableSelectionChanged);
+  connect(&info_watcher_, &QFutureWatcher<backup::helper::Info>::finished, this, &ConfigTab::updateBackupInfos);
+  connect(&list_watcher_, &QFutureWatcher<std::vector<backup::helper::ListItem>>::finished, this,
+          &ConfigTab::updateBackupList);
 }
 
 ConfigTab::~ConfigTab() {
@@ -144,6 +147,16 @@ void ConfigTab::backupFinished() {
   ui->cancelBackupButton->setDisabled(true);
 }
 
+void ConfigTab::updateBackupInfos() {
+  auto info = info_future_.result();
+  ui->infoLocationLabel->setText(info.location.c_str());
+  QLocale locale;
+  ui->infoOriginalSizeLabel->setText(info.originalSize ? locale.formattedDataSize(info.originalSize) : "-");
+  ui->infoCompressedSizeLabel->setText(info.compressedSize ? locale.formattedDataSize(info.compressedSize) : "-");
+}
+
+void ConfigTab::updateBackupList() { backupTableModel->updateBackups(list_future_.result()); }
+
 QTabWidget *ConfigTab::getTabWidget() const {
   return parentWidget() ? qobject_cast<QTabWidget *>(parentWidget()->parentWidget()) : nullptr;
 }
@@ -153,13 +166,17 @@ void ConfigTab::updateFromBackupConfig() {
                                                                    : Qt::CheckState::Unchecked);
   ui->openMountPointCheckBox->setCheckState(backupConfig->isMountPointToBeOpened() ? Qt::CheckState::Checked
                                                                                    : Qt::CheckState::Unchecked);
-  auto info = backupConfig->info();
-  ui->infoLocationLabel->setText(info.location.c_str());
-  QLocale locale;
-  ui->infoOriginalSizeLabel->setText(info.originalSize ? locale.formattedDataSize(info.originalSize) : "-");
-  ui->infoCompressedSizeLabel->setText(info.compressedSize ? locale.formattedDataSize(info.compressedSize) : "-");
 
-  backupTableModel->updateBackups(backupConfig->list());
+  if (!info_future_.isRunning()) {
+    info_future_ = QtConcurrent::run([this]() -> backup::helper::Info { return backupConfig->info(); });
+    info_watcher_.setFuture(info_future_);
+  }
+
+  if (!list_future_.isRunning()) {
+    list_future_ =
+        QtConcurrent::run([this]() -> std::vector<backup::helper::ListItem> { return backupConfig->list(); });
+    list_watcher_.setFuture(list_future_);
+  }
 }
 
 bool ConfigTab::isRowSelected() const { return ui->backupsTableView->selectionModel()->hasSelection(); }
