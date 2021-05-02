@@ -28,7 +28,6 @@ class BackupConfigMock : public trompeloeil::mock_interface<BackupConfig> {
   IMPLEMENT_MOCK0(info);
   IMPLEMENT_MOCK2(startBackup);
   IMPLEMENT_MOCK0(cancelBackup);
-  IMPLEMENT_MOCK0(isAccessible);
   IMPLEMENT_MOCK2(mountArchive);
   IMPLEMENT_MOCK1(umountArchive);
 };

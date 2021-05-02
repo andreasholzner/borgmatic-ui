@@ -33,6 +33,7 @@ class MainWindow : public QMainWindow {
   void addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig);
   void readWindowSettings();
   void saveWindowSettings();
+  bool areAnyArchivesMounted();
 
   Ui::MainWindow *ui;
   std::unique_ptr<BorgmaticManager> borgmaticManager;

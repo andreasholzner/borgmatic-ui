@@ -70,7 +70,6 @@ class BackupConfig {
   virtual void cancelBackup() = 0;
   virtual void mountArchive(std::string const& archiveName, std::string const& mountPoint) = 0;
   virtual void umountArchive(std::string const& mountPoint) = 0;
-  virtual bool isAccessible() = 0;
 };
 
 template <class T>
@@ -97,7 +96,6 @@ class BackupConfigImpl : public BackupConfig {
   void cancelBackup() override;
   void mountArchive(std::string const& archiveName, std::string const& mountPoint) override;
   void umountArchive(std::string const& mountPoint) override;
-  bool isAccessible() override;
 
   template <typename Archive>
   void save(Archive& ar) const {
@@ -115,6 +113,7 @@ class BackupConfigImpl : public BackupConfig {
       std::string const& action) const;
   template <typename... Arg>
   void runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const;
+  bool isAccessible();
 
   std::filesystem::path pathToConfig;
   bool purgeFlag;

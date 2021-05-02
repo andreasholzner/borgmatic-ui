@@ -1,9 +1,11 @@
 #include "MainWindow.h"
 
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QSettings>
 #include <QStatusBar>
 #include <QString>
+#include <QTableView>
 
 #include "ConfigTab.h"
 #include "ui_mainwindow.h"
@@ -27,6 +29,15 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* paren
 MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
+  if (areAnyArchivesMounted()) {
+    spdlog::debug("Some archive are still mounted.");
+    auto reply = QMessageBox::question(this, "Beenden", "Es sind noch Archive gemountet. Trotzdem beenden?",
+                                       QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No) {
+      event->ignore();
+      return;
+    }
+  }
   saveWindowSettings();
   event->accept();
 }
@@ -67,4 +78,17 @@ void MainWindow::saveWindowSettings() {
   QSettings settings;
   settings.setValue(GEOMETRY_KEY, saveGeometry());
   settings.setValue(STATE_KEY, saveState());
+}
+
+bool MainWindow::areAnyArchivesMounted() {
+  for (auto tab : ui->borgmaticTabWidget->findChildren<ConfigTab*>()) {
+    auto backupsTable = tab->findChild<QTableView*>("backupsTableView");
+    auto model = qobject_cast<BackupListModel*>(backupsTable->model());
+    for (int i = 0; i != model->rowCount(); ++i) {
+      if (model->rowData(i).is_mounted) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
