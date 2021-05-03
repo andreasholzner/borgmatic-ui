@@ -28,7 +28,7 @@ auto prepareInfo() {
 }
 
 auto prepareList() {
-  return std::vector<backup::helper::ListItem>{{"id1", "name1", "2000-10-05 10:15:30.500", false},
+  return std::vector<backup::helper::ListItem>{{"id1", "name1", "2000-10-05 10:15:30.500", false, "/some/path"},
                                                {"id2", "name2", "2000-10-06 10:15:30.500", true}};
 }
 
@@ -209,7 +209,6 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == false);
-    REQUIRE(model->rowData(row).mount_path.empty());
   }
 
   SECTION("mount button does not open directory with unchecked checkbox") {
@@ -224,5 +223,38 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     FORBID_CALL(*wrapperMock, openLocation(_));
     mountButton->click();
+  }
+
+  SECTION("list updates preserve mount information") {
+    auto listUpdate = std::vector<backup::helper::ListItem>{{"id1", "name1b", "2000-10-05 10:15:30.500"},
+                                                            {"id2", "name2b", "2000-10-06 10:15:30.500"},
+                                                            {"id3", "name3b", "200-10-07 16:13:33.222"}};
+
+    // using text field change as update mechanism
+    ALLOW_CALL(*config, borgmaticConfigFile(_));
+    ALLOW_CALL(*config, info()).RETURN(prepareInfo());
+    REQUIRE_CALL(*config, list()).RETURN(listUpdate);
+    ALLOW_CALL(*config, isBackupPurging()).RETURN(true);
+    ALLOW_CALL(*config, isBackupPurging(_));
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(true);
+    ALLOW_CALL(*config, isMountPointToBeOpened(_));
+    configTab->findChild<QLineEdit *>("configEdit")->setText("filename");
+    wait_for_qthreads_to_finish();
+    QApplication::processEvents();
+
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    REQUIRE(model->rowData(0).id == "id1");
+    REQUIRE(model->rowData(0).name == "name1b");
+    REQUIRE(model->rowData(0).is_mounted == false);
+    REQUIRE(model->rowData(0).mount_path == "/some/path");
+    REQUIRE(model->rowData(1).id == "id2");
+    REQUIRE(model->rowData(1).name == "name2b");
+    REQUIRE(model->rowData(1).is_mounted == true);
+    REQUIRE(model->rowData(1).mount_path.empty());
+    REQUIRE(model->rowData(2).id == "id3");
+    REQUIRE(model->rowData(2).name == "name3b");
+    REQUIRE(model->rowData(2).is_mounted == false);
+    REQUIRE(model->rowData(2).mount_path.empty());
   }
 }

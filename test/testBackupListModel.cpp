@@ -67,6 +67,19 @@ TEST_CASE("BackupListModel dynamic properties", "[logic]") {
     REQUIRE(model.rowData(1).is_mounted == false);
     REQUIRE(model.rowData(1).mount_path == "");
   }
+
+  SECTION("updateBackups preserves mount information") {
+    auto listUpdate = std::vector<backup::helper::ListItem>{{"id1", "name1b", "2000-10-05 10:15:30.500"},
+                                                            {"id2", "name2b", "2001-10-06 10:15:30.500"},
+                                                            {"id3", "name3b", "200-10-07 16:13:33.222"}};
+    model.updateBackups(listUpdate);
+
+    REQUIRE(model.rowData(1).id == "id2");
+    REQUIRE(model.rowData(1).name == listUpdate[1].name);
+    REQUIRE(model.rowData(1).start == listUpdate[1].start);
+    REQUIRE(model.rowData(1).is_mounted == modelData[1].is_mounted);
+    REQUIRE(model.rowData(1).mount_path == modelData[1].mount_path);
+  }
 }
 
 TEST_CASE("BackupListModel update behavior", "[logic]") {

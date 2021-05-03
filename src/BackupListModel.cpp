@@ -5,6 +5,7 @@
 #include <QBrush>
 #include <QColor>
 #include <QDateTime>
+#include <algorithm>
 
 static QColor const MOUNTED_ROW_ODD = QColor::fromRgb(244, 237, 26);
 static QColor const MOUNTED_ROW_EVEN = QColor::fromRgb(221, 215, 28);
@@ -52,7 +53,16 @@ int BackupListModel::columnCount(QModelIndex const &parent) const { return 2; }
 
 void BackupListModel::updateBackups(std::vector<backup::helper::ListItem> const &data) {
   beginResetModel();
+  auto oldBackups = backups;
   backups = data;
+  for (backup::helper::ListItem &backupEntry : backups) {
+    auto matchingOldEntry = std::ranges::find_if(
+        oldBackups, [id = backupEntry.id](backup::helper::ListItem entry) { return entry.id == id; });
+    if (matchingOldEntry != oldBackups.end()) {
+      backupEntry.is_mounted = matchingOldEntry->is_mounted;
+      backupEntry.mount_path = matchingOldEntry->mount_path;
+    }
+  }
   endResetModel();
 }
 
