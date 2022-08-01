@@ -33,6 +33,7 @@ auto prepareList() {
 }
 
 TEST_CASE("ConfigTab construction", "[ui]") {
+  QLocale::setDefault(QLocale::c());
   auto config = std::make_shared<BackupConfigMock>();
   std::shared_ptr<DesktopServicesWrapper> wrapperMock{std::make_shared<DesktopServicesWrapperMock>()};
   std::string configFileName{"file1"};
@@ -57,7 +58,7 @@ TEST_CASE("ConfigTab construction", "[ui]") {
     // data from info
     REQUIRE(configTab.findChild<QLineEdit *>("configEdit")->text().toStdString() == configFileName);
     REQUIRE(configTab.findChild<QLabel *>("infoLocationLabel")->text().toStdString() == prepareInfo().location);
-    REQUIRE(configTab.findChild<QLabel *>("infoOriginalSizeLabel")->text().toStdString() == "1.000,00 KiB");
+    REQUIRE(configTab.findChild<QLabel *>("infoOriginalSizeLabel")->text().toStdString() == "1000.00 KiB");
     REQUIRE(configTab.findChild<QLabel *>("infoCompressedSizeLabel")->text().toStdString() == "-");
 
     // data from list
