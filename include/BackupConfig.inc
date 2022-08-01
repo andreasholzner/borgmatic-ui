@@ -43,7 +43,7 @@ std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {
   std::vector<backup::helper::ListItem> result;
   std::ranges::transform(
       jsonList[0]["archives"], std::back_inserter(result),
-      [](nlohmann::json::reference j) -> auto { return j.get<backup::helper::ListItem>(); });
+      [](nlohmann::json::reference j) -> auto{ return j.get<backup::helper::ListItem>(); });
   return result;
 }
 
@@ -58,12 +58,11 @@ backup::helper::Info BackupConfigImpl<W>::info() {
     auto infoResult = runSimpleBorgmaticCommandWithJsonOutputOnConfig("info");
     Info info;
     if (auto jsonInfo = std::get_if<nlohmann::json>(&infoResult)) {
-      info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto { return (*jsonInfo)[0]["repository"]["id"]; });
+      info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["id"]; });
       info.location =
-          safeJsonAccess<std::string>([jsonInfo]() -> auto { return (*jsonInfo)[0]["repository"]["location"]; });
-      info.originalSize = safeJsonAccess<std::uint64_t>([jsonInfo]() -> auto {
-        return (*jsonInfo)[0]["cache"]["stats"]["total_size"];
-      });
+          safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["location"]; });
+      info.originalSize =
+          safeJsonAccess<std::uint64_t>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["cache"]["stats"]["total_size"]; });
       info.compressedSize =
           safeJsonAccess<std::uint64_t>([jsonInfo]() { return (*jsonInfo)[0]["cache"]["stats"]["total_csize"]; });
     } else {
