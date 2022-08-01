@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(borgmatic-ui LANGUAGES CXX)
 
-find_package(Qt5 COMPONENTS Core Widgets Concurrent REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Concurrent REQUIRED)
 find_package(cereal REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(nlohmann_json REQUIRED)
@@ -44,11 +44,12 @@ add_executable(${PROJECT_NAME} src/main.cpp
         ${SRC})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES AUTOUIC_SEARCH_PATHS ui)
+add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x050F00)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        Qt5::Core Qt5::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+        Qt6::Core Qt6::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
 
 include(CTest)
 if (BUILD_TESTING)

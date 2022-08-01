@@ -1,5 +1,5 @@
 find_package(Catch2 REQUIRED)
-find_package(Qt5Test REQUIRED)
+find_package(Qt6Test REQUIRED)
 
 find_package(trompeloeil QUIET)
 if (NOT trompeloeil_FOUND)
@@ -31,5 +31,5 @@ add_executable(borgmatic_test
         ${MAIN_SRC} ${MAIN_HEADERS} ${MAIN_UIS})
 set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)
-target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt5::Test trompeloeil
-        Qt5::Core Qt5::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt6::Test trompeloeil
+        Qt6::Core Qt6::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
