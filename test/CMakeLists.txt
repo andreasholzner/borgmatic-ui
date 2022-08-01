@@ -32,4 +32,4 @@ add_executable(borgmatic_test
 set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)
 target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt5::Test trompeloeil
-        Qt5::Core Qt5::Widgets cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+        Qt5::Core Qt5::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)

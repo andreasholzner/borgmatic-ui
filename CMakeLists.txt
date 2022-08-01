@@ -48,7 +48,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES AUTOUIC_SEARCH_PATHS ui)
 target_include_directories(${PROJECT_NAME} PRIVATE
         include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        Qt5::Core Qt5::Widgets cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+        Qt5::Core Qt5::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
 
 include(CTest)
 if (BUILD_TESTING)
