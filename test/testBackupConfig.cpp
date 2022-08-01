@@ -15,6 +15,7 @@ struct BackupWorkerMock {
     workerMock.start(onFinished, logHandler);
   }
   void cancel() { workerMock.cancel(); }
+  std::filesystem::path executable() const { return "/usr/bin/borgmatic"; }
 };
 
 TEST_CASE("BackupConfig", "[logic]") {
@@ -51,5 +52,25 @@ TEST_CASE("BackupConfig", "[logic]") {
     REQUIRE(info.location.empty());
     REQUIRE(info.originalSize == 0);
     REQUIRE(info.compressedSize == 0);
+  }
+}
+
+struct BackupWorkerBrokenPathMock {
+  void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
+  void start(std::function<void()> onFinished, std::function<void(std::string)> logHandler) {}
+  void cancel() {}
+  std::filesystem::path executable() const { return "/not-found"; }
+};
+
+TEST_CASE("BackupConfig with broken executable", "[logic]") {
+  BackupConfigImpl<BackupWorkerBrokenPathMock> backupConfigWithBrokenPath;
+  backupConfigWithBrokenPath.borgmaticConfigFile("/some/file");
+
+  SECTION("info fails gracefully when borgmatic cannot be called") {
+    REQUIRE_NOTHROW(backupConfigWithBrokenPath.info());
+  }
+
+  SECTION("list fails gracefully when borgmatic cannot be called") {
+    REQUIRE_NOTHROW(backupConfigWithBrokenPath.list());
   }
 }

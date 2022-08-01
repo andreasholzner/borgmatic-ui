@@ -119,11 +119,17 @@ std::variant<nlohmann::json, std::vector<std::string>>
 BackupConfigImpl<W>::runSimpleBorgmaticCommandWithJsonOutputOnConfig(std::string const& action) const {
   namespace bp = boost::process;
   bp::ipstream output, errorOutput;
-  auto code = bp::system("/usr/bin/borgmatic", action, "--json", "-c", pathToConfig.string(), bp::std_out > output,
-                         bp::std_err > errorOutput);
+  int code;
+  try {
+    code = bp::system(worker.executable().c_str(), action, "--json", "-c", pathToConfig.string(), bp::std_out > output,
+                      bp::std_err > errorOutput);
+  } catch (std::exception const& e) {
+    spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
+    return {};
+  }
 
   if (code) {
-    spdlog::info("borgmatic {} failed: {}", action, code);
+    spdlog::info("Calling borgmatic executable {} {} failed: {}", worker.executable().string(), action, code);
     std::vector<std::string> collectedOutput;
     std::string line;
     while (std::getline(errorOutput, line)) {
@@ -142,11 +148,17 @@ template <typename... Arg>
 void BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const {
   namespace bp = boost::process;
   bp::ipstream output, errorOutput;
-  auto code = bp::system("/usr/bin/borgmatic", action, "-c", pathToConfig.string(), args..., bp::std_out > output,
-                         bp::std_err > errorOutput);
+  int code;
+  try {
+    code = bp::system(worker.executable().c_str(), action, "-c", pathToConfig.string(), args..., bp::std_out > output,
+                      bp::std_err > errorOutput);
+  } catch (std::exception const& e) {
+    spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
+    return;
+  }
 
   if (code) {
-    spdlog::warn("borgmatic {} failed: {}", action, code);
+    spdlog::warn("Calling borgmatic executable {} {} failed: {}", worker.executable().string(), action, code);
   }
   std::string line;
   while (std::getline(output, line)) {

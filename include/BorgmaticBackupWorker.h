@@ -34,6 +34,7 @@ class BorgmaticBackupWorker {
   }
   bool isRunning();
   void cancel();
+  std::filesystem::path executable() const { return "/usr/bin/borgmatic"; };
 
  private:
   void createChildProcess(std::shared_ptr<boost::process::async_pipe> ioPipe);

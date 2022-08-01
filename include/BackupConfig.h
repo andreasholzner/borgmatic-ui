@@ -77,6 +77,7 @@ concept Worker = requires(T w) {
   w.configure(std::filesystem::path{}, true);
   w.start(&backup::helper::handler, &backup::helper::logHandler);
   w.cancel();
+  { w.executable() } -> std::same_as<std::filesystem::path>;
 };
 
 template <Worker W>
