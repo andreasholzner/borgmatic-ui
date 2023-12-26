@@ -3,7 +3,7 @@
 #include <QPushButton>
 #include <QTabWidget>
 #include <QtTest>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <catch2/trompeloeil.hpp>
 #include <memory>
 #include <vector>
