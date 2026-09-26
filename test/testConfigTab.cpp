@@ -196,6 +196,19 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(statusMessage == "Backup was cancelled");
   }
 
+  SECTION("destroying the tab cancels a running backup and waits for it") {
+    REQUIRE_CALL(*config, startBackup(_, _));
+    configTab->findChild<QPushButton *>("startBackupButton")->click();
+
+    REQUIRE_CALL(*config, cancelBackupAndWait());
+    configTab.reset();
+  }
+
+  SECTION("destroying the tab without a running backup doesn't touch the backup") {
+    FORBID_CALL(*config, cancelBackupAndWait());
+    configTab.reset();
+  }
+
   SECTION("mount and umount button") {
     auto mountButton = configTab->findChild<QPushButton *>("backupMountButton");
     auto umountButton = configTab->findChild<QPushButton *>("backupUmountButton");

@@ -34,6 +34,7 @@ class MainWindow : public QMainWindow {
   void readWindowSettings();
   void saveWindowSettings();
   bool areAnyArchivesMounted();
+  bool areAnyBackupsRunning();
 
   Ui::MainWindow *ui;
   std::unique_ptr<BorgmaticManager> borgmaticManager;

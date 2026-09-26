@@ -6,6 +6,7 @@
 #include <QStatusBar>
 #include <QString>
 #include <QTableView>
+#include <algorithm>
 
 #include "ConfigTab.h"
 #include "ui_mainwindow.h"
@@ -29,6 +30,15 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* paren
 MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
+  if (areAnyBackupsRunning()) {
+    // Destroying the tabs cancels the backups and waits for borgmatic to exit.
+    auto reply = QMessageBox::question(this, "Beenden", "Es läuft noch ein Backup. Backup abbrechen und beenden?",
+                                       QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No) {
+      event->ignore();
+      return;
+    }
+  }
   if (areAnyArchivesMounted()) {
     spdlog::debug("Some archive are still mounted.");
     auto reply = QMessageBox::question(this, "Beenden", "Es sind noch Archive gemountet. Trotzdem beenden?",
@@ -78,6 +88,11 @@ void MainWindow::saveWindowSettings() {
   QSettings settings;
   settings.setValue(GEOMETRY_KEY, saveGeometry());
   settings.setValue(STATE_KEY, saveState());
+}
+
+bool MainWindow::areAnyBackupsRunning() {
+  auto tabs = ui->borgmaticTabWidget->findChildren<ConfigTab*>();
+  return std::ranges::any_of(tabs, [](ConfigTab const* tab) { return tab->isBackupRunning(); });
 }
 
 bool MainWindow::areAnyArchivesMounted() {

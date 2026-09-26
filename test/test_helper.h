@@ -32,6 +32,7 @@ class BackupConfigMock : public trompeloeil::mock_interface<BackupConfig> {
   IMPLEMENT_MOCK0(info);
   IMPLEMENT_MOCK2(startBackup);
   IMPLEMENT_MOCK0(cancelBackup);
+  IMPLEMENT_MOCK0(cancelBackupAndWait);
   IMPLEMENT_MOCK2(mountArchive);
   IMPLEMENT_MOCK1(umountArchive);
 };
@@ -46,6 +47,7 @@ struct BackupWorkerMockImpl {
   MAKE_MOCK2(configure, void(std::filesystem::path, bool));
   MAKE_MOCK2(start, void(std::function<void(int)>, std::function<void(std::string)>));
   MAKE_MOCK0(cancel, void());
+  MAKE_MOCK0(cancelAndWait, void());
 };
 
 static void wait_for_qthreads_to_finish() {

@@ -4,7 +4,10 @@
 
 #include <boost/asio.hpp>
 #include <boost/process.hpp>
+#include <chrono>
+#include <csignal>
 #include <memory>
+#include <thread>
 
 void backup::helper::readOutput(std::shared_ptr<boost::asio::readable_pipe> pipe, boost::asio::streambuf &buf,
                                 std::function<void(std::string)> const &outputHandler) {
@@ -26,6 +29,11 @@ void BorgmaticBackupWorker::configure(std::filesystem::path const &pathToConfig,
   purgeFlag_ = purgeFlag;
 }
 
+BorgmaticBackupWorker::~BorgmaticBackupWorker() {
+  // The io thread uses buffer and the output handler, so it must not outlive the worker.
+  cancelAndWait();
+}
+
 bool BorgmaticBackupWorker::isRunning() { return backupFuture.isRunning(); }
 
 void BorgmaticBackupWorker::cancel() {
@@ -33,6 +41,26 @@ void BorgmaticBackupWorker::cancel() {
     auto pid = backupProcess->id();
     kill(pid, SIGINT);
   }
+}
+
+void BorgmaticBackupWorker::cancelAndWait() {
+  using namespace std::chrono_literals;
+  backupWatcher.disconnect();
+  if (!isRunning()) {
+    return;
+  }
+  cancel();
+  auto deadline = std::chrono::steady_clock::now() + 60s;
+  while (!backupFuture.isFinished() && std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::sleep_for(100ms);
+  }
+  if (!backupFuture.isFinished()) {
+    spdlog::warn("borgmatic did not exit after SIGINT, killing it");
+    kill(backupProcess->id(), SIGKILL);
+    // Child processes of borgmatic may still hold the output pipe open, so don't wait for its end.
+    ioContext->stop();
+  }
+  backupFuture.waitForFinished();
 }
 
 void BorgmaticBackupWorker::createChildProcess(boost::asio::readable_pipe &ioPipe) {

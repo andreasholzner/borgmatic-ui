@@ -9,12 +9,19 @@
 
 template <Worker W>
 std::string BackupConfigImpl<W>::borgmaticConfigFile() const {
-  return pathToConfig.string();
+  return configPath().string();
 }
 
 template <Worker W>
 void BackupConfigImpl<W>::borgmaticConfigFile(std::string const& configFile) {
+  std::scoped_lock lock{mutex_};
   pathToConfig = std::filesystem::path(configFile);
+}
+
+template <Worker W>
+std::filesystem::path BackupConfigImpl<W>::configPath() const {
+  std::scoped_lock lock{mutex_};
+  return pathToConfig;
 }
 
 template <Worker W>
@@ -43,7 +50,7 @@ std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {
   auto listResult = runSimpleBorgmaticCommandWithJsonOutputOnConfig("list");
   auto jsonList = std::get_if<nlohmann::json>(&listResult);
   if (!jsonList) {
-    spdlog::warn("Could not list archives of {}", pathToConfig.string());
+    spdlog::warn("Could not list archives of {}", configPath().string());
     return {};
   }
 
@@ -61,41 +68,50 @@ std::vector<backup::helper::ListItem> BackupConfigImpl<W>::list() {
 
 template <Worker W>
 backup::helper::Info BackupConfigImpl<W>::info() {
-  if (!info_) {
-    if (pathToConfig.empty()) {
-      spdlog::info("skipping borgmatic info due to unknown config");
-      return {};
+  auto config = configPath();
+  {
+    std::scoped_lock lock{mutex_};
+    if (info_) {
+      return *info_;
     }
-    using namespace backup::helper;
-    auto infoResult = runSimpleBorgmaticCommandWithJsonOutputOnConfig("info");
-    Info info;
-    if (auto jsonInfo = std::get_if<nlohmann::json>(&infoResult)) {
-      info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["id"]; });
-      info.location =
-          safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["location"]; });
-      info.originalSize =
-          safeJsonAccess<std::uint64_t>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["cache"]["stats"]["total_size"]; });
-      info.compressedSize =
-          safeJsonAccess<std::uint64_t>([jsonInfo]() { return (*jsonInfo)[0]["cache"]["stats"]["total_csize"]; });
-    } else {
-      auto const& errorLines = std::get<1>(infoResult);
-      if (!errorLines.empty()) {
-        std::vector<std::string> parts;
-        boost::split(parts, errorLines[0], [](auto c) { return c == ' '; });
-        if (parts.size() > 1) {
-          info.location = parts[1];
-        }
+  }
+  if (config.empty()) {
+    spdlog::info("skipping borgmatic info due to unknown config");
+    return {};
+  }
+  using namespace backup::helper;
+  auto infoResult = runSimpleBorgmaticCommandWithJsonOutputOnConfig("info");
+  Info info;
+  if (auto jsonInfo = std::get_if<nlohmann::json>(&infoResult)) {
+    info.id = safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["id"]; });
+    info.location =
+        safeJsonAccess<std::string>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["repository"]["location"]; });
+    info.originalSize =
+        safeJsonAccess<std::uint64_t>([jsonInfo]() -> auto{ return (*jsonInfo)[0]["cache"]["stats"]["total_size"]; });
+    info.compressedSize =
+        safeJsonAccess<std::uint64_t>([jsonInfo]() { return (*jsonInfo)[0]["cache"]["stats"]["total_csize"]; });
+  } else {
+    auto const& errorLines = std::get<1>(infoResult);
+    if (!errorLines.empty()) {
+      std::vector<std::string> parts;
+      boost::split(parts, errorLines[0], [](auto c) { return c == ' '; });
+      if (parts.size() > 1) {
+        info.location = parts[1];
       }
     }
+  }
+  std::scoped_lock lock{mutex_};
+  // Don't cache the info of a config file that has been replaced in the meantime.
+  if (pathToConfig == config) {
     info_ = info;
   }
-  return info_.value();
+  return info;
 }
 
 template <Worker W>
 void BackupConfigImpl<W>::startBackup(std::function<void(int)> onFinished,
                                       std::function<void(std::string)> const& outputHandler) {
-  worker.configure(pathToConfig, purgeFlag);
+  worker.configure(configPath(), purgeFlag);
   worker.start(std::move(onFinished), [outputHandler](std::string line) {
     spdlog::debug(line);
     outputHandler(line);
@@ -105,6 +121,11 @@ void BackupConfigImpl<W>::startBackup(std::function<void(int)> onFinished,
 template <Worker W>
 void BackupConfigImpl<W>::cancelBackup() {
   worker.cancel();
+}
+
+template <Worker W>
+void BackupConfigImpl<W>::cancelBackupAndWait() {
+  worker.cancelAndWait();
 }
 
 template <Worker W>
@@ -134,7 +155,7 @@ std::variant<nlohmann::json, std::vector<std::string>>
 BackupConfigImpl<W>::runSimpleBorgmaticCommandWithJsonOutputOnConfig(std::string const& action) const {
   backup::helper::ProcessResult result;
   try {
-    result = backup::helper::runProcess(worker.executable(), {action, "--json", "-c", pathToConfig.string()});
+    result = backup::helper::runProcess(worker.executable(), {action, "--json", "-c", configPath().string()});
   } catch (std::exception const& e) {
     spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
     return std::vector<std::string>{};
@@ -168,7 +189,7 @@ bool BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(std::string const& a
   backup::helper::ProcessResult result;
   try {
     result = backup::helper::runProcess(worker.executable(),
-                                        {action, "-c", pathToConfig.string(), std::string(args)...});
+                                        {action, "-c", configPath().string(), std::string(args)...});
   } catch (std::exception const& e) {
     spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
     return false;

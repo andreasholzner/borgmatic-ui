@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -69,6 +70,8 @@ class BackupConfig {
       std::function<void(int)> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) = 0;
   virtual void cancelBackup() = 0;
+  // Cancels a running backup and blocks until borgmatic has exited; onFinished is not called anymore.
+  virtual void cancelBackupAndWait() = 0;
   virtual bool mountArchive(std::string const& archiveName, std::string const& mountPoint) = 0;
   virtual bool umountArchive(std::string const& mountPoint) = 0;
 };
@@ -78,6 +81,7 @@ concept Worker = requires(T w) {
   w.configure(std::filesystem::path{}, true);
   w.start(&backup::helper::handler, &backup::helper::logHandler);
   w.cancel();
+  w.cancelAndWait();
   { w.executable() } -> std::same_as<std::filesystem::path>;
 };
 
@@ -96,17 +100,19 @@ class BackupConfigImpl : public BackupConfig {
       std::function<void(int)> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) override;
   void cancelBackup() override;
+  void cancelBackupAndWait() override;
   bool mountArchive(std::string const& archiveName, std::string const& mountPoint) override;
   bool umountArchive(std::string const& mountPoint) override;
 
   template <typename Archive>
   void save(Archive& ar) const {
-    ar(pathToConfig.string(), purgeFlag, openMountFlag);
+    ar(configPath().string(), purgeFlag, openMountFlag);
   }
   template <typename Archive>
   void load(Archive& ar) {
     std::string filePath;
     ar(filePath, purgeFlag, openMountFlag);
+    std::scoped_lock lock{mutex_};
     pathToConfig = std::filesystem::path(filePath);
   }
 
@@ -118,7 +124,11 @@ class BackupConfigImpl : public BackupConfig {
   template <typename... Arg>
   bool runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const;
   bool isAccessible();
+  std::filesystem::path configPath() const;
 
+  // info() and list() run on background threads while the UI may change the config file, so pathToConfig and info_
+  // are guarded by mutex_. borgmatic itself is never run while holding the lock.
+  mutable std::mutex mutex_;
   std::filesystem::path pathToConfig;
   bool purgeFlag;
   bool openMountFlag;

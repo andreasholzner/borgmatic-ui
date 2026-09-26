@@ -4,6 +4,8 @@
 #include <catch2/trompeloeil.hpp>
 #include <chrono>
 #include <fstream>
+#include <future>
+#include <thread>
 #include <memory>
 #include <optional>
 
@@ -20,6 +22,7 @@ struct BackupWorkerMock {
     workerMock.start(onFinished, logHandler);
   }
   void cancel() { workerMock.cancel(); }
+  void cancelAndWait() { workerMock.cancelAndWait(); }
   std::filesystem::path executable() const { return "/usr/bin/borgmatic"; }
 };
 
@@ -64,6 +67,7 @@ struct BackupWorkerBrokenPathMock {
   void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
   void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {}
   void cancel() {}
+  void cancelAndWait() {}
   std::filesystem::path executable() const { return "/not-found"; }
 };
 
@@ -99,6 +103,7 @@ struct ScriptedWorker {
   void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
   void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {}
   void cancel() {}
+  void cancelAndWait() {}
   std::filesystem::path executable() const { return script; }
 };
 
@@ -176,6 +181,19 @@ esac)"};
     REQUIRE(backupConfig.info().location == "/mnt/usb/repo");
   }
 
+  SECTION("info is not cached for a config file replaced while borgmatic was running") {
+    // $4 is the config file passed via -c
+    FakeBorgmatic borgmatic{R"(sleep 0.5; echo "[{\"repository\": {\"id\": \"id\", \"location\": \"$4\"}}]")"};
+    ScriptedWorker::script = borgmatic.path();
+
+    auto runningInfo = std::async(std::launch::async, [&backupConfig] { return backupConfig.info(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    backupConfig.borgmaticConfigFile("/other/config.yaml");
+
+    REQUIRE(runningInfo.get().location == "/some/config.yaml");
+    REQUIRE(backupConfig.info().location == "/other/config.yaml");
+  }
+
   SECTION("mount and umount report success") {
     FakeBorgmatic borgmatic{"exit 0"};
     ScriptedWorker::script = borgmatic.path();
@@ -226,5 +244,40 @@ TEST_CASE("BorgmaticBackupWorker reports borgmatic's exit code", "[logic]") {
     BorgmaticBackupWorker worker{"/not-found"};
 
     REQUIRE(runBackup(worker, output) == -1);
+  }
+}
+
+TEST_CASE("BorgmaticBackupWorker cancelAndWait", "[logic]") {
+  FakeBorgmatic borgmatic{R"(trap 'echo interrupted; exit 130' INT
+echo started
+i=0; while [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done)"};
+
+  SECTION("stops a running backup without calling onFinished") {
+    BorgmaticBackupWorker worker{borgmatic.path()};
+    bool finishedCalled = false;
+    worker.configure("/some/config.yaml", false);
+    worker.start([&finishedCalled](int) { finishedCalled = true; }, [](std::string const&) {});
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    REQUIRE(worker.isRunning());
+
+    auto start = std::chrono::steady_clock::now();
+    worker.cancelAndWait();
+
+    REQUIRE_FALSE(worker.isRunning());
+    REQUIRE(std::chrono::steady_clock::now() - start < std::chrono::seconds(5));
+    QCoreApplication::processEvents();
+    REQUIRE_FALSE(finishedCalled);
+  }
+
+  SECTION("destroying a worker with a running backup is safe") {
+    std::vector<std::string> output;
+    {
+      BorgmaticBackupWorker worker{borgmatic.path()};
+      worker.configure("/some/config.yaml", false);
+      worker.start([](int) {}, [&output](std::string const& line) { output.push_back(line); });
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    QCoreApplication::processEvents();
+    REQUIRE(output.front() == "started");
   }
 }

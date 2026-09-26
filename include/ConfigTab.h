@@ -24,6 +24,8 @@ class ConfigTab : public QWidget {
 
   ~ConfigTab() override;
 
+  bool isBackupRunning() const;
+
  public slots:
   void onCurrentTabChanged(int index);
 
@@ -56,6 +58,7 @@ class ConfigTab : public QWidget {
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
   std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
+  bool backupRunning_ = false;
   bool backupCancelled_ = false;
   QFuture<backup::helper::Info> info_future_;
   QFutureWatcher<backup::helper::Info> info_watcher_;

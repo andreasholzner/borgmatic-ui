@@ -30,6 +30,10 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config,
 }
 
 ConfigTab::~ConfigTab() {
+  // The backup's output handler and completion callback refer to this tab.
+  if (backupRunning_) {
+    backupConfig->cancelBackupAndWait();
+  }
   delete ui;
   delete backupTableModel;
 }
@@ -60,7 +64,10 @@ void ConfigTab::on_configShowFileButton_clicked() {
 
 void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
 
+bool ConfigTab::isBackupRunning() const { return backupRunning_; }
+
 void ConfigTab::on_startBackupButton_clicked() {
+  backupRunning_ = true;
   backupCancelled_ = false;
   ui->startBackupButton->setEnabled(false);
   ui->cancelBackupButton->setEnabled(true);
@@ -150,6 +157,7 @@ void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelect
 }
 
 void ConfigTab::backupFinished(int exitCode) {
+  backupRunning_ = false;
   if (backupCancelled_) {
     emit setStatusMessage("Backup was cancelled", 30000);
     spdlog::info("Backup was cancelled, borgmatic exit code {}", exitCode);
@@ -187,13 +195,14 @@ void ConfigTab::updateFromBackupConfig() {
                                                                                    : Qt::CheckState::Unchecked);
 
   if (!info_future_.isRunning()) {
-    info_future_ = QtConcurrent::run([this]() -> backup::helper::Info { return backupConfig->info(); });
+    // Capture the config, not this: the tab may be destroyed before the task has finished.
+    info_future_ = QtConcurrent::run([config = backupConfig]() -> backup::helper::Info { return config->info(); });
     info_watcher_.setFuture(info_future_);
   }
 
   if (!list_future_.isRunning()) {
-    list_future_ =
-        QtConcurrent::run([this]() -> std::vector<backup::helper::ListItem> { return backupConfig->list(); });
+    list_future_ = QtConcurrent::run(
+        [config = backupConfig]() -> std::vector<backup::helper::ListItem> { return config->list(); });
     list_watcher_.setFuture(list_future_);
   }
 }

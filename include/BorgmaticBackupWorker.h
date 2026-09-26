@@ -21,6 +21,9 @@ class BorgmaticBackupWorker {
  public:
   explicit BorgmaticBackupWorker(std::filesystem::path executable = "/usr/bin/borgmatic")
       : executable_(std::move(executable)) {}
+  ~BorgmaticBackupWorker();
+  BorgmaticBackupWorker(BorgmaticBackupWorker const &) = delete;
+  BorgmaticBackupWorker &operator=(BorgmaticBackupWorker const &) = delete;
 
   void configure(std::filesystem::path const &pathToConfig, bool purgeFlag);
   // onFinished receives borgmatic's exit code, or -1 if borgmatic couldn't be started.
@@ -59,6 +62,8 @@ class BorgmaticBackupWorker {
   }
   bool isRunning();
   void cancel();
+  // Interrupts borgmatic and blocks until it has exited (killing it after a grace period). onFinished is not called.
+  void cancelAndWait();
   std::filesystem::path executable() const { return executable_; };
 
  private:
