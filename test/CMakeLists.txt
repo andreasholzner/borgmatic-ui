@@ -6,7 +6,7 @@ if (NOT trompeloeil_FOUND)
     include(FetchContent)
     FetchContent_Declare(trompeloeil
             GIT_REPOSITORY https://github.com/rollbear/trompeloeil.git
-            GIT_TAG v39
+            GIT_TAG v49
             )
     FetchContent_MakeAvailable(trompeloeil)
 endif ()
@@ -32,4 +32,4 @@ add_executable(borgmatic_test
 set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)
 target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt6::Test trompeloeil
-        Qt6::Core Qt6::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+        Qt6::Core Qt6::Widgets Qt6::Concurrent cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers Boost::process)

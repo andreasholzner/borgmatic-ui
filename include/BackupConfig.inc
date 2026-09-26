@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-#include <boost/process.hpp>
 #include <filesystem>
+#include <sstream>
+
+#include "ProcessRunner.h"
 
 template <Worker W>
 std::string BackupConfigImpl<W>::borgmaticConfigFile() const {
@@ -116,16 +118,15 @@ void BackupConfigImpl<W>::umountArchive(std::string const& mountPoint) {
 template <Worker W>
 std::variant<nlohmann::json, std::vector<std::string>>
 BackupConfigImpl<W>::runSimpleBorgmaticCommandWithJsonOutputOnConfig(std::string const& action) const {
-  namespace bp = boost::process;
-  bp::ipstream output, errorOutput;
-  int code;
+  backup::helper::ProcessResult result;
   try {
-    code = bp::system(worker.executable().c_str(), action, "--json", "-c", pathToConfig.string(), bp::std_out > output,
-                      bp::std_err > errorOutput);
+    result = backup::helper::runProcess(worker.executable(), {action, "--json", "-c", pathToConfig.string()});
   } catch (std::exception const& e) {
     spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
     return {};
   }
+  auto code = result.exitCode;
+  std::istringstream output{result.stdOut}, errorOutput{result.stdErr};
 
   if (code) {
     spdlog::info("Calling borgmatic executable {} {} failed: {}", worker.executable().string(), action, code);
@@ -145,16 +146,16 @@ BackupConfigImpl<W>::runSimpleBorgmaticCommandWithJsonOutputOnConfig(std::string
 template <Worker W>
 template <typename... Arg>
 void BackupConfigImpl<W>::runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const {
-  namespace bp = boost::process;
-  bp::ipstream output, errorOutput;
-  int code;
+  backup::helper::ProcessResult result;
   try {
-    code = bp::system(worker.executable().c_str(), action, "-c", pathToConfig.string(), args..., bp::std_out > output,
-                      bp::std_err > errorOutput);
+    result = backup::helper::runProcess(worker.executable(),
+                                        {action, "-c", pathToConfig.string(), std::string(args)...});
   } catch (std::exception const& e) {
     spdlog::error("Error calling borgmatic executable {}, reason: {}", worker.executable().string(), e.what());
     return;
   }
+  auto code = result.exitCode;
+  std::istringstream output{result.stdOut}, errorOutput{result.stdErr};
 
   if (code) {
     spdlog::warn("Calling borgmatic executable {} {} failed: {}", worker.executable().string(), action, code);

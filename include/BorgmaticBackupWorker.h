@@ -10,9 +10,10 @@
 #include <concepts>
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 namespace backup::helper {
-void readOutput(std::shared_ptr<boost::process::async_pipe> pipe, boost::asio::streambuf &buf,
+void readOutput(std::shared_ptr<boost::asio::readable_pipe> pipe, boost::asio::streambuf &buf,
                 std::function<void(std::string)> const &outputHandler);
 }  // namespace backup::helper
 
@@ -24,12 +25,14 @@ class BorgmaticBackupWorker {
     backupWatcher.disconnect();
     QObject::connect(&backupWatcher, &QFutureWatcher<void>::finished, onFinished);
 
-    auto ioService = std::make_shared<boost::asio::io_service>();
-    auto ioPipe = std::make_shared<boost::process::async_pipe>(*ioService);
-    createChildProcess(ioPipe);
+    // The previous process is bound to the previous io_context, so it has to go first.
+    backupProcess.reset();
+    ioContext = std::make_shared<boost::asio::io_context>();
+    auto ioPipe = std::make_shared<boost::asio::readable_pipe>(*ioContext);
+    createChildProcess(*ioPipe);
     backup::helper::readOutput(ioPipe, buffer, outputHandler);
 
-    backupFuture = QtConcurrent::run([ioService] { ioService->run(); });
+    backupFuture = QtConcurrent::run([ioContext = ioContext] { ioContext->run(); });
     backupWatcher.setFuture(backupFuture);
   }
   bool isRunning();
@@ -37,10 +40,12 @@ class BorgmaticBackupWorker {
   std::filesystem::path executable() const { return "/usr/bin/borgmatic"; };
 
  private:
-  void createChildProcess(std::shared_ptr<boost::process::async_pipe> ioPipe);
+  void createChildProcess(boost::asio::readable_pipe &ioPipe);
 
   boost::asio::streambuf buffer;
-  boost::process::child backupProcess;
+  // Declared before backupProcess, so the process is destroyed before its io_context.
+  std::shared_ptr<boost::asio::io_context> ioContext;
+  std::optional<boost::process::process> backupProcess;
   QFuture<void> backupFuture;
   QFutureWatcher<void> backupWatcher;
   std::filesystem::path pathToConfig_;

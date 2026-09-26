@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 project(borgmatic-ui LANGUAGES CXX)
 
@@ -6,7 +6,7 @@ find_package(Qt6 COMPONENTS Core Widgets Concurrent REQUIRED)
 find_package(cereal REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS process)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -25,14 +25,16 @@ set(HEADERS
         include/BorgmaticManager.h
         include/BackupListModel.h
         include/BorgmaticBackupWorker.h
-        include/DesktopServicesWrapper.h)
+        include/DesktopServicesWrapper.h
+        include/ProcessRunner.h)
 
 set(SRC
         src/MainWindow.cpp
         src/ConfigTab.cpp
         src/BorgmaticManager.cpp
         src/BackupListModel.cpp
-        src/BorgmaticBackupWorker.cpp)
+        src/BorgmaticBackupWorker.cpp
+        src/ProcessRunner.cpp)
 
 set(UIS
         ui/mainwindow.ui
@@ -49,7 +51,7 @@ add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x050F00)
 target_include_directories(${PROJECT_NAME} PRIVATE
         include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        Qt6::Core Qt6::Widgets cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers)
+        Qt6::Core Qt6::Widgets Qt6::Concurrent cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers Boost::process)
 
 include(CTest)
 if (BUILD_TESTING)
