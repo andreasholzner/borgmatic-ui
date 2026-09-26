@@ -7,7 +7,7 @@ A Qt desktop front end for [borgmatic](https://torsion.org/borgmatic/).
 ### Requirements
 
 - CMake ≥ 3.16 and a C++20 compiler (GCC or Clang)
-- Qt 6 (Core, Widgets, Concurrent, Test)
+- Qt ≥ 6.6 (Core, Widgets, Concurrent, Test)
 - Boost ≥ 1.88 including the compiled Boost.Process library
 - cereal, spdlog, nlohmann_json
 - Catch2 v3 (tests only)

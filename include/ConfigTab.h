@@ -39,16 +39,16 @@ class ConfigTab : public QWidget {
   void onCurrentTabChanged(int index);
 
  private slots:
-  void on_configEdit_textChanged(QString const &fileName);
-  void on_configEditFileButton_clicked();
-  void on_configShowFileButton_clicked();
-  void on_startBackupButton_clicked();
-  void on_cancelBackupButton_clicked();
-  void on_deleteConfigButton_clicked();
-  void on_purgeCheckBox_stateChanged(int state);
-  void on_openMountPointCheckBox_stateChanged(int state);
-  void on_backupMountButton_clicked();
-  void on_backupUmountButton_clicked();
+  void configFileEdited(QString const &fileName);
+  void selectConfigFile();
+  void showConfigFile();
+  void startBackup();
+  void cancelBackup();
+  void requestDeletion();
+  void setBackupPurging(bool purging);
+  void setMountPointToBeOpened(bool open);
+  void mountSelectedArchive();
+  void umountSelectedArchive();
   void tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous);
   void backupFinished(int exitCode);
   void updateBackupInfos();

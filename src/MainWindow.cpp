@@ -19,6 +19,8 @@ MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager,
       borgmaticManager(std::move(manager)),
       desktop_services_wrapper_(std::move(desktopServicesWrapper)) {
   ui->setupUi(this);
+  connect(ui->menuNew, &QAction::triggered, this, &MainWindow::addNewConfig);
+  connect(ui->menuQuit, &QAction::triggered, this, &MainWindow::quit);
   ui->borgmaticTabWidget->clear();
   for (auto&& config : borgmaticManager->configs()) {
     addTabForConfig(config);
@@ -49,12 +51,12 @@ void MainWindow::closeEvent(QCloseEvent* event) {
   event->accept();
 }
 
-void MainWindow::on_menuNew_triggered() {
+void MainWindow::addNewConfig() {
   auto borgmaticConfig = borgmaticManager->newBorgmaticConfig();
   addTabForConfig(borgmaticConfig);
 }
 
-void MainWindow::on_menuQuit_triggered() { close(); }
+void MainWindow::quit() { close(); }
 
 void MainWindow::deleteConfigTab(int index) {
   auto tab = qobject_cast<ConfigTab*>(ui->borgmaticTabWidget->widget(index));

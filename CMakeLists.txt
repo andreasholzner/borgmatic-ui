@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(borgmatic-ui LANGUAGES CXX)
 
-find_package(Qt6 COMPONENTS Core Widgets Concurrent REQUIRED)
+find_package(Qt6 6.6 COMPONENTS Core Widgets Concurrent REQUIRED)
 find_package(cereal REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(nlohmann_json REQUIRED)

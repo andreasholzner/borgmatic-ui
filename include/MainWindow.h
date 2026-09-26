@@ -28,8 +28,8 @@ class MainWindow : public QMainWindow {
   void closeEvent(QCloseEvent *event) override;
 
  private slots:
-  void on_menuNew_triggered();
-  void on_menuQuit_triggered();
+  void addNewConfig();
+  void quit();
   void deleteConfigTab(int index);
 
  private:

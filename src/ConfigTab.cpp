@@ -17,6 +17,16 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config,
       backupConfig(config),
       desktop_services_wrapper_(desktopServicesWrapper) {
   ui->setupUi(this);
+  connect(ui->configEdit, &QLineEdit::textChanged, this, &ConfigTab::configFileEdited);
+  connect(ui->configEditFileButton, &QPushButton::clicked, this, &ConfigTab::selectConfigFile);
+  connect(ui->configShowFileButton, &QPushButton::clicked, this, &ConfigTab::showConfigFile);
+  connect(ui->startBackupButton, &QPushButton::clicked, this, &ConfigTab::startBackup);
+  connect(ui->cancelBackupButton, &QPushButton::clicked, this, &ConfigTab::cancelBackup);
+  connect(ui->deleteConfigButton, &QPushButton::clicked, this, &ConfigTab::requestDeletion);
+  connect(ui->purgeCheckBox, &QCheckBox::toggled, this, &ConfigTab::setBackupPurging);
+  connect(ui->openMountPointCheckBox, &QCheckBox::toggled, this, &ConfigTab::setMountPointToBeOpened);
+  connect(ui->backupMountButton, &QPushButton::clicked, this, &ConfigTab::mountSelectedArchive);
+  connect(ui->backupUmountButton, &QPushButton::clicked, this, &ConfigTab::umountSelectedArchive);
   ui->backupsTableView->setModel(backupTableModel);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
@@ -45,7 +55,7 @@ ConfigTab::~ConfigTab() {
   delete backupTableModel;
 }
 
-void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
+void ConfigTab::configFileEdited(QString const &fileName) {
   auto tabWidget = getTabWidget();
   if (tabWidget) {
     auto index = tabWidget->indexOf(this);
@@ -56,20 +66,20 @@ void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
   refreshTimer_.start();
 }
 
-void ConfigTab::on_configEditFileButton_clicked() {
+void ConfigTab::selectConfigFile() {
   auto selectedFile = desktop_services_wrapper_->selectBorgmaticConfigFile(this);
   if (!selectedFile.isEmpty()) {
     ui->configEdit->setText(selectedFile);
   }
 }
 
-void ConfigTab::on_configShowFileButton_clicked() {
+void ConfigTab::showConfigFile() {
   auto selectedFile = backupConfig->borgmaticConfigFile();
   spdlog::debug("Opening config file '{}' in default editor...", selectedFile);
   desktop_services_wrapper_->openLocation(QString::fromStdString(selectedFile));
 }
 
-void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
+void ConfigTab::requestDeletion() { emit deleteTab(getTabWidget()->indexOf(this)); }
 
 bool ConfigTab::isBackupRunning() const { return backupRunning_; }
 
@@ -98,7 +108,7 @@ bool ConfigTab::umountAllArchives() {
   return allUmounted;
 }
 
-void ConfigTab::on_startBackupButton_clicked() {
+void ConfigTab::startBackup() {
   backupRunning_ = true;
   backupCancelled_ = false;
   ui->startBackupButton->setEnabled(false);
@@ -107,7 +117,7 @@ void ConfigTab::on_startBackupButton_clicked() {
                             [this](std::string const &line) { emit setStatusMessage(line.c_str()); });
 }
 
-void ConfigTab::on_cancelBackupButton_clicked() {
+void ConfigTab::cancelBackup() {
   // Start is re-enabled and the UI refreshed in backupFinished, once borgmatic has actually exited and released the
   // repository lock.
   backupCancelled_ = true;
@@ -115,15 +125,15 @@ void ConfigTab::on_cancelBackupButton_clicked() {
   ui->cancelBackupButton->setEnabled(false);
 }
 
-void ConfigTab::on_purgeCheckBox_stateChanged(int state) {
-  backupConfig->isBackupPurging(state == Qt::CheckState::Checked);
+void ConfigTab::setBackupPurging(bool purging) {
+  backupConfig->isBackupPurging(purging);
 }
 
-void ConfigTab::on_openMountPointCheckBox_stateChanged(int state) {
-  backupConfig->isMountPointToBeOpened(state == Qt::CheckState::Checked);
+void ConfigTab::setMountPointToBeOpened(bool open) {
+  backupConfig->isMountPointToBeOpened(open);
 }
 
-void ConfigTab::on_backupMountButton_clicked() {
+void ConfigTab::mountSelectedArchive() {
   if (!isRowSelected()) {
     spdlog::warn("MountButton used without valid selection.");
     return;
@@ -159,7 +169,7 @@ void ConfigTab::on_backupMountButton_clicked() {
       });
 }
 
-void ConfigTab::on_backupUmountButton_clicked() {
+void ConfigTab::umountSelectedArchive() {
   if (!isRowSelected()) {
     spdlog::warn("UmountButton used without valid selection.");
     return;

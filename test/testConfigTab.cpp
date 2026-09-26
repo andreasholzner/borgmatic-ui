@@ -123,6 +123,13 @@ TEST_CASE("ConfigTab", "[ui]") {
     wait_for_qthreads_to_finish();
   }
 
+  SECTION("checkboxes update the config once per click") {
+    REQUIRE_CALL(*config, isBackupPurging(eq(true))).TIMES(1);
+    configTab->findChild<QCheckBox *>("purgeCheckBox")->click();
+    REQUIRE_CALL(*config, isMountPointToBeOpened(eq(true))).TIMES(1);
+    configTab->findChild<QCheckBox *>("openMountPointCheckBox")->click();
+  }
+
   SECTION("show config button opens borgmatic config file in a editor") {
     std::string filename{"file"};
     REQUIRE_CALL(*config, borgmaticConfigFile()).RETURN(filename);
