@@ -11,7 +11,7 @@ static QColor const MOUNTED_ROW_ODD = QColor::fromRgb(244, 237, 26);
 static QColor const MOUNTED_ROW_EVEN = QColor::fromRgb(221, 215, 28);
 
 QVariant BackupListModel::data(QModelIndex const &index, int role) const {
-  if (index.row() > backups.size() - 1 ||
+  if (!index.isValid() || index.row() >= rowCount() ||
       (role != Qt::DisplayRole && role != Qt::ToolTipRole && role != Qt::BackgroundRole)) {
     return QVariant();
   }
@@ -47,7 +47,7 @@ QVariant BackupListModel::headerData(int section, Qt::Orientation orientation, i
   }
 }
 
-int BackupListModel::rowCount(QModelIndex const &parent) const { return backups.size(); }
+int BackupListModel::rowCount(QModelIndex const &parent) const { return static_cast<int>(backups.size()); }
 
 int BackupListModel::columnCount(QModelIndex const &parent) const { return 2; }
 
@@ -77,7 +77,7 @@ std::optional<size_t> BackupListModel::rowOfArchive(std::string const &id) const
 }
 
 void BackupListModel::setMountInfos(size_t row, bool is_mounted, const std::string &mount_point) {
-  if (row > backups.size()) {
+  if (row >= backups.size()) {
     spdlog::warn("Trying to update mount data: row index out of range: {}.", row);
     return;
   }

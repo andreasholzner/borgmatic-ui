@@ -19,6 +19,15 @@ TEST_CASE("BackupListModel static properties", "[logic]") {
     REQUIRE(model.columnCount() == 2);
   }
 
+  SECTION("data of an empty model") {
+    REQUIRE(model.data(QModelIndex()) == QVariant());
+    REQUIRE(model.data(model.index(0, 0)) == QVariant());
+  }
+
+  SECTION("setMountInfos ignores rows out of range") {
+    REQUIRE_NOTHROW(model.setMountInfos(0, true, "/mnt"));
+  }
+
   SECTION("header data") {
     REQUIRE(model.headerData(0, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant("Backup Name"));
     REQUIRE(model.headerData(1, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant("Datum"));
