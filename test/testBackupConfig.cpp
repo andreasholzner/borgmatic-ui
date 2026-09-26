@@ -29,6 +29,11 @@ struct BackupWorkerMock {
 TEST_CASE("BackupConfig", "[logic]") {
   BackupConfigImpl<BackupWorkerMock> backupConfig;
 
+  SECTION("new config neither purges nor opens mount points") {
+    REQUIRE(backupConfig.isBackupPurging() == false);
+    REQUIRE(backupConfig.isMountPointToBeOpened() == false);
+  }
+
   SECTION("cancelBackup calls cancel on worker") {
     REQUIRE_CALL(workerMock, cancel());
 

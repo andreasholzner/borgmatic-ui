@@ -78,7 +78,7 @@ class BorgmaticBackupWorker {
   QFuture<int> backupFuture;
   QFutureWatcher<int> backupWatcher;
   std::filesystem::path pathToConfig_;
-  bool purgeFlag_;
+  bool purgeFlag_ = false;
 };
 
 #endif  // BORGMATIC_UI_INCLUDE_BORGMATICBACKUPWORKER_H_

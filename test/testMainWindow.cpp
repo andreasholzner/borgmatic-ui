@@ -80,6 +80,25 @@ TEST_CASE("MainWindow", "[ui]") {
     REQUIRE(tabWidget->tabText(0) == QString{"name2"});
   }
 
+  SECTION("Closing the window saves the backup configs") {
+    ALLOW_CALL(*manager, configs()).RETURN(prepareConfigs({}));
+    auto mainWindow = MainWindow{std::move(uniqueManager)};
+    mainWindow.show();
+
+    REQUIRE_CALL(*manager, saveSettings());
+    REQUIRE(mainWindow.close());
+  }
+
+  SECTION("Quit menu entry saves the backup configs once") {
+    ALLOW_CALL(*manager, configs()).RETURN(prepareConfigs({}));
+    auto mainWindow = MainWindow{std::move(uniqueManager)};
+    mainWindow.show();
+
+    REQUIRE_CALL(*manager, saveSettings()).TIMES(1);
+    mainWindow.findChild<QAction *>("menuQuit")->trigger();
+    REQUIRE_FALSE(mainWindow.isVisible());
+  }
+
   SECTION("Updates the tab after a switch") {
     auto config1 = std::make_shared<BackupConfigMock>();
     auto config2 = std::make_shared<BackupConfigMock>();

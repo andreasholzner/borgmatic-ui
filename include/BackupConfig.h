@@ -130,8 +130,8 @@ class BackupConfigImpl : public BackupConfig {
   // are guarded by mutex_. borgmatic itself is never run while holding the lock.
   mutable std::mutex mutex_;
   std::filesystem::path pathToConfig;
-  bool purgeFlag;
-  bool openMountFlag;
+  bool purgeFlag = false;
+  bool openMountFlag = false;
   W worker;
   std::optional<backup::helper::Info> info_;
 };

@@ -49,6 +49,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     }
   }
   saveWindowSettings();
+  borgmaticManager->saveSettings();
   event->accept();
 }
 
@@ -57,10 +58,7 @@ void MainWindow::on_menuNew_triggered() {
   addTabForConfig(borgmaticConfig);
 }
 
-void MainWindow::on_menuQuit_triggered() {
-  close();
-  borgmaticManager->saveSettings();
-}
+void MainWindow::on_menuQuit_triggered() { close(); }
 
 void MainWindow::deleteConfigTab(int index) {
   ui->borgmaticTabWidget->removeTab(index);
