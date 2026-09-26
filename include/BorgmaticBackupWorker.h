@@ -39,6 +39,8 @@ class BorgmaticBackupWorker {
     // The previous process is bound to the previous io_context, so it has to go first.
     backupProcess.reset();
     ioContext = std::make_shared<boost::asio::io_context>();
+    // Output left over from a previous, interrupted run doesn't belong to this one.
+    buffer.consume(buffer.size());
     auto ioPipe = std::make_shared<boost::asio::readable_pipe>(*ioContext);
     try {
       createChildProcess(*ioPipe);

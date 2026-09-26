@@ -111,7 +111,8 @@ The steps below use borgmatic 2.x. They need [borgmatic](https://torsion.org/bor
   and the list of archives.
 - **Back up:** *Backup* runs `borgmatic create` followed by `borgmatic check`. With *purge* checked, it runs
   `borgmatic prune` first, which deletes archives according to the `keep_*` options of the configuration. The status
-  bar shows whether the backup succeeded; a failed backup stays visible there. *Cancel Backup* interrupts borgmatic.
+  bar shows borgmatic's progress and then whether the backup succeeded; a failed backup stays visible there.
+  *Cancel Backup* interrupts borgmatic.
 - **Browse an archive:** select an archive and click *Mount* to choose an empty directory to mount it to. With *Open
   mounted directory* checked, it's opened in the file manager. Mounted archives are highlighted; select one and
   click *Umount* when you're done.

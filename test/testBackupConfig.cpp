@@ -254,6 +254,19 @@ TEST_CASE("BorgmaticBackupWorker reports borgmatic's exit code", "[logic]") {
     REQUIRE(output == std::vector<std::string>{"args: --config /some/config.yaml create --progress check"});
   }
 
+  SECTION("reports stdout and stderr lines separated by '\\n' or '\\r'") {
+    FakeBorgmatic borgmatic{R"(echo "starting"
+printf 'Reading config\rReading chunks\r\r1 MB O 1 MB C f1\r2 MB O 2 MB C f2\n\n' >&2
+echo "between"
+printf 'Checking segments 50.0%%\rChecking segments 100.0%%' >&2)"};
+    BorgmaticBackupWorker worker{borgmatic.path()};
+
+    REQUIRE(runBackup(worker, output) == 0);
+    REQUIRE(output == std::vector<std::string>{"starting", "Reading config", "Reading chunks", "1 MB O 1 MB C f1",
+                                               "2 MB O 2 MB C f2", "between", "Checking segments 50.0%",
+                                               "Checking segments 100.0%"});
+  }
+
   SECTION("failed backup") {
     FakeBorgmatic borgmatic{"echo 'working'; exit 2"};
     BorgmaticBackupWorker worker{borgmatic.path()};
