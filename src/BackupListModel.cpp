@@ -41,7 +41,7 @@ QVariant BackupListModel::headerData(int section, Qt::Orientation orientation, i
     case 0:
       return QVariant("Backup Name");
     case 1:
-      return QVariant("Datum");
+      return QVariant("Date");
     default:
       return QVariant();
   }

@@ -30,7 +30,7 @@ TEST_CASE("BackupListModel static properties", "[logic]") {
 
   SECTION("header data") {
     REQUIRE(model.headerData(0, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant("Backup Name"));
-    REQUIRE(model.headerData(1, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant("Datum"));
+    REQUIRE(model.headerData(1, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant("Date"));
 
     REQUIRE(model.headerData(2, Qt::Orientation::Horizontal, Qt::DisplayRole) == QVariant());
     REQUIRE(model.headerData(0, Qt::Orientation::Vertical, Qt::DisplayRole) == QVariant());

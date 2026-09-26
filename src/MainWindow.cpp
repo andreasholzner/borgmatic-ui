@@ -33,15 +33,14 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::closeEvent(QCloseEvent* event) {
   if (areAnyBackupsRunning()) {
     // Destroying the tabs cancels the backups and waits for borgmatic to exit.
-    if (!desktop_services_wrapper_->confirm(this, "Beenden",
-                                            "Es läuft noch ein Backup. Backup abbrechen und beenden?")) {
+    if (!desktop_services_wrapper_->confirm(this, "Quit", "A backup is still running. Cancel it and quit?")) {
       event->ignore();
       return;
     }
   }
   if (areAnyArchivesMounted()) {
     spdlog::debug("Some archive are still mounted.");
-    if (!desktop_services_wrapper_->confirm(this, "Beenden", "Es sind noch Archive gemountet. Trotzdem beenden?")) {
+    if (!desktop_services_wrapper_->confirm(this, "Quit", "Archives are still mounted. Quit anyway?")) {
       event->ignore();
       return;
     }
