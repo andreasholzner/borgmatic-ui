@@ -12,7 +12,7 @@ A Qt desktop front end for [borgmatic](https://torsion.org/borgmatic/).
 - cereal, spdlog, nlohmann_json
 - Catch2 v3 (tests only)
 - trompeloeil (tests only; downloaded automatically if not installed)
-- borgmatic installed at `/usr/bin/borgmatic` at runtime
+- borgmatic at runtime, found on `PATH` (falls back to `/usr/bin/borgmatic`)
 
 On Arch/Manjaro:
 

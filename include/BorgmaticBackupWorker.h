@@ -12,6 +12,8 @@
 #include <memory>
 #include <optional>
 
+#include "ProcessRunner.h"
+
 namespace backup::helper {
 void readOutput(std::shared_ptr<boost::asio::readable_pipe> pipe, boost::asio::streambuf &buf,
                 std::function<void(std::string)> const &outputHandler);
@@ -19,7 +21,7 @@ void readOutput(std::shared_ptr<boost::asio::readable_pipe> pipe, boost::asio::s
 
 class BorgmaticBackupWorker {
  public:
-  explicit BorgmaticBackupWorker(std::filesystem::path executable = "/usr/bin/borgmatic")
+  explicit BorgmaticBackupWorker(std::filesystem::path executable = backup::helper::borgmaticExecutable())
       : executable_(std::move(executable)) {}
   ~BorgmaticBackupWorker();
   BorgmaticBackupWorker(BorgmaticBackupWorker const &) = delete;
