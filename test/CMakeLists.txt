@@ -33,3 +33,6 @@ set_target_properties(borgmatic_test PROPERTIES AUTOUIC_SEARCH_PATHS ../ui)
 target_include_directories(borgmatic_test PRIVATE ../include)
 target_link_libraries(borgmatic_test PRIVATE Catch2::Catch2 Qt6::Test trompeloeil
         Qt6::Core Qt6::Widgets Qt6::Concurrent cereal::cereal spdlog::spdlog nlohmann_json::nlohmann_json Boost::headers Boost::process)
+
+add_test(NAME borgmatic_test COMMAND borgmatic_test)
+set_tests_properties(borgmatic_test PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
