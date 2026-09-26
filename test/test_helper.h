@@ -79,6 +79,15 @@ static void wait_for_qthreads_to_finish() {
   spdlog::warn("Thread count did not decrease to 0 within waiting period.");
 }
 
+// Keeps real borgmatic out of tests that need a BackupConfigImpl but don't care about borgmatic's results.
+struct NoBorgmaticWorker {
+  void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
+  void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {}
+  void cancel() {}
+  void cancelAndWait() {}
+  std::filesystem::path executable() const { return "/nonexistent/borgmatic"; }
+};
+
 // Waits for thread pool tasks and delivers their completion signals.
 static void wait_for_background_tasks() {
   wait_for_qthreads_to_finish();

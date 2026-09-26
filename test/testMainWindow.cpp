@@ -19,7 +19,7 @@ using namespace trompeloeil;
 std::vector<std::shared_ptr<BackupConfig>> prepareConfigs(std::vector<std::string> const &configNames) {
   std::vector<std::shared_ptr<BackupConfig>> res{configNames.size()};
   std::transform(configNames.begin(), configNames.end(), res.begin(), [](std::string const &configName) {
-    auto backupConfig = std::make_shared<BackupConfigImpl<BorgmaticBackupWorker>>();
+    auto backupConfig = std::make_shared<BackupConfigImpl<NoBorgmaticWorker>>();
     backupConfig->borgmaticConfigFile(configName);
     return std::static_pointer_cast<BackupConfig>(backupConfig);
   });
@@ -71,7 +71,7 @@ TEST_CASE("MainWindow", "[ui]") {
     auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
     REQUIRE(tabWidget->count() == 0);
 
-    REQUIRE_CALL(*manager, newBorgmaticConfig()).RETURN(std::make_shared<BackupConfigImpl<BorgmaticBackupWorker>>());
+    REQUIRE_CALL(*manager, newBorgmaticConfig()).RETURN(std::make_shared<BackupConfigImpl<NoBorgmaticWorker>>());
 
     mainWindow.findChild<QAction *>("menuNew")->trigger();
 

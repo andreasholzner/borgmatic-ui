@@ -39,9 +39,6 @@ TEST_CASE("BorgmaticManager", "[logic]") {
   }
 
   SECTION("can be saved and read from settings") {
-    QCoreApplication::setOrganizationName("test_holzner");
-    QCoreApplication::setApplicationName("test-borgmatic-ui");
-
     {
       auto config1 = borgmaticManager->newBorgmaticConfig();
       config1->borgmaticConfigFile("name1");
