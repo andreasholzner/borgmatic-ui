@@ -61,16 +61,18 @@ void ConfigTab::on_configShowFileButton_clicked() {
 void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()->indexOf(this)); }
 
 void ConfigTab::on_startBackupButton_clicked() {
-  backupConfig->startBackup([this]() { backupFinished(); },
-                            [this](std::string const &line) { emit setStatusMessage(line.c_str()); });
+  backupCancelled_ = false;
   ui->startBackupButton->setEnabled(false);
   ui->cancelBackupButton->setEnabled(true);
+  backupConfig->startBackup([this](int exitCode) { backupFinished(exitCode); },
+                            [this](std::string const &line) { emit setStatusMessage(line.c_str()); });
 }
 
 void ConfigTab::on_cancelBackupButton_clicked() {
+  // Start is re-enabled and the UI refreshed in backupFinished, once borgmatic has actually exited and released the
+  // repository lock.
+  backupCancelled_ = true;
   backupConfig->cancelBackup();
-  updateFromBackupConfig();
-  ui->startBackupButton->setEnabled(true);
   ui->cancelBackupButton->setEnabled(false);
 }
 
@@ -97,8 +99,12 @@ void ConfigTab::on_backupMountButton_clicked() {
   auto backupName = backupTableModel->rowData(row).name;
   spdlog::debug("Mounting archive {} to mount point {}", backupName, dir.toStdString());
 
-  backupConfig->mountArchive(backupName, dir.toStdString());
+  bool mounted = backupConfig->mountArchive(backupName, dir.toStdString());
   ui->backupsTableView->selectionModel()->clearSelection();
+  if (!mounted) {
+    emit setStatusMessage(QString("Mounting %1 failed").arg(backupName.c_str()));
+    return;
+  }
   backupTableModel->setMountInfos(row, true, dir.toStdString());
 
   if (backupConfig->isMountPointToBeOpened()) {
@@ -115,8 +121,12 @@ void ConfigTab::on_backupUmountButton_clicked() {
   auto mountPoint = backupTableModel->rowData(row).mount_path;
   spdlog::debug("Umounting mount point: {}", mountPoint);
 
-  backupConfig->umountArchive(mountPoint);
+  bool umounted = backupConfig->umountArchive(mountPoint);
   ui->backupsTableView->selectionModel()->clearSelection();
+  if (!umounted) {
+    emit setStatusMessage(QString("Unmounting %1 failed").arg(mountPoint.c_str()));
+    return;
+  }
   backupTableModel->setMountInfos(row, false, "");
 }
 
@@ -139,9 +149,18 @@ void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelect
   }
 }
 
-void ConfigTab::backupFinished() {
-  emit setStatusMessage("Backup is done", 30000);
-  spdlog::debug("Backup is done");
+void ConfigTab::backupFinished(int exitCode) {
+  if (backupCancelled_) {
+    emit setStatusMessage("Backup was cancelled", 30000);
+    spdlog::info("Backup was cancelled, borgmatic exit code {}", exitCode);
+  } else if (exitCode == 0) {
+    emit setStatusMessage("Backup is done", 30000);
+    spdlog::debug("Backup is done");
+  } else {
+    // No timeout: a failed backup must not go unnoticed.
+    emit setStatusMessage(QString("Backup FAILED (borgmatic exit code %1)").arg(exitCode));
+    spdlog::error("Backup failed, borgmatic exit code {}", exitCode);
+  }
   updateFromBackupConfig();
   ui->startBackupButton->setEnabled(true);
   ui->cancelBackupButton->setDisabled(true);

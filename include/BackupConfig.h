@@ -49,7 +49,7 @@ T safeJsonAccess(std::function<T()> input, T defaultValue = T()) {
   return result;
 }
 
-constexpr void handler() {}
+constexpr void handler(int exitCode) {}
 constexpr void logHandler(std::string const& msg) {}
 }  // namespace backup::helper
 
@@ -64,12 +64,13 @@ class BackupConfig {
   virtual void isMountPointToBeOpened(bool state) = 0;
   virtual std::vector<backup::helper::ListItem> list() = 0;
   virtual backup::helper::Info info() = 0;
+  // onFinished receives borgmatic's exit code; anything but 0 means the backup failed or was cancelled.
   virtual void startBackup(
-      std::function<void()> onFinished,
+      std::function<void(int)> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) = 0;
   virtual void cancelBackup() = 0;
-  virtual void mountArchive(std::string const& archiveName, std::string const& mountPoint) = 0;
-  virtual void umountArchive(std::string const& mountPoint) = 0;
+  virtual bool mountArchive(std::string const& archiveName, std::string const& mountPoint) = 0;
+  virtual bool umountArchive(std::string const& mountPoint) = 0;
 };
 
 template <class T>
@@ -92,11 +93,11 @@ class BackupConfigImpl : public BackupConfig {
   std::vector<backup::helper::ListItem> list() override;
   backup::helper::Info info() override;
   void startBackup(
-      std::function<void()> onFinished,
+      std::function<void(int)> onFinished,
       std::function<void(std::string)> const& outputHandler = [](std::string const&) {}) override;
   void cancelBackup() override;
-  void mountArchive(std::string const& archiveName, std::string const& mountPoint) override;
-  void umountArchive(std::string const& mountPoint) override;
+  bool mountArchive(std::string const& archiveName, std::string const& mountPoint) override;
+  bool umountArchive(std::string const& mountPoint) override;
 
   template <typename Archive>
   void save(Archive& ar) const {
@@ -110,10 +111,12 @@ class BackupConfigImpl : public BackupConfig {
   }
 
  private:
+  // Returns the parsed JSON on success, otherwise borgmatic's stderr lines (empty if borgmatic couldn't be run or
+  // produced invalid JSON).
   std::variant<nlohmann::json, std::vector<std::string>> runSimpleBorgmaticCommandWithJsonOutputOnConfig(
       std::string const& action) const;
   template <typename... Arg>
-  void runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const;
+  bool runSimpleBorgmaticCommandOnConfig(std::string const& action, Arg... args) const;
   bool isAccessible();
 
   std::filesystem::path pathToConfig;

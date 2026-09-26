@@ -39,7 +39,7 @@ class ConfigTab : public QWidget {
   void on_backupMountButton_clicked();
   void on_backupUmountButton_clicked();
   void tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous);
-  void backupFinished();
+  void backupFinished(int exitCode);
   void updateBackupInfos();
   void updateBackupList();
 
@@ -56,6 +56,7 @@ class ConfigTab : public QWidget {
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
   std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
+  bool backupCancelled_ = false;
   QFuture<backup::helper::Info> info_future_;
   QFutureWatcher<backup::helper::Info> info_watcher_;
   QFuture<std::vector<backup::helper::ListItem>> list_future_;

@@ -111,7 +111,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
 
-    std::function<void()> usedFinishedHandler;
+    std::function<void(int)> usedFinishedHandler;
     REQUIRE_CALL(*config, startBackup(_, _)).LR_SIDE_EFFECT(usedFinishedHandler = _1);
 
     startButton->click();
@@ -124,36 +124,76 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
-    usedFinishedHandler();
+    QString statusMessage;
+    QObject::connect(configTab.get(), &ConfigTab::setStatusMessage,
+                     [&statusMessage](QString const &message, int) { statusMessage = message; });
+
+    usedFinishedHandler(0);
     wait_for_qthreads_to_finish();
 
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
+    REQUIRE(statusMessage == "Backup is done");
   }
 
-  SECTION("cancel backup button cancels a running backup and refreshes the ui") {
+  SECTION("a failed backup is reported as failure") {
+    std::function<void(int)> usedFinishedHandler;
+    REQUIRE_CALL(*config, startBackup(_, _)).LR_SIDE_EFFECT(usedFinishedHandler = _1);
+    configTab->findChild<QPushButton *>("startBackupButton")->click();
+
+    QString statusMessage;
+    QObject::connect(configTab.get(), &ConfigTab::setStatusMessage,
+                     [&statusMessage](QString const &message, int) { statusMessage = message; });
+    ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
+    ALLOW_CALL(*config, info()).RETURN(prepareInfo());
+    ALLOW_CALL(*config, list()).RETURN(prepareList());
+
+    usedFinishedHandler(2);
+    wait_for_qthreads_to_finish();
+
+    REQUIRE(statusMessage.contains("FAILED"));
+    REQUIRE(configTab->findChild<QPushButton *>("startBackupButton")->isEnabled() == true);
+  }
+
+  SECTION("cancel backup button cancels a running backup and refreshes the ui once borgmatic exited") {
     auto startButton = configTab->findChild<QPushButton *>("startBackupButton");
     auto cancelButton = configTab->findChild<QPushButton *>("cancelBackupButton");
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
 
-    REQUIRE_CALL(*config, startBackup(_, _));
+    std::function<void(int)> usedFinishedHandler;
+    REQUIRE_CALL(*config, startBackup(_, _)).LR_SIDE_EFFECT(usedFinishedHandler = _1);
     startButton->click();
 
     REQUIRE(startButton->isEnabled() == false);
     REQUIRE(cancelButton->isEnabled() == true);
 
-    REQUIRE_CALL(*config, cancelBackup());
+    {
+      REQUIRE_CALL(*config, cancelBackup());
+      FORBID_CALL(*config, info());
+      FORBID_CALL(*config, list());
+      cancelButton->click();
+      wait_for_qthreads_to_finish();
+    }
+
+    REQUIRE(startButton->isEnabled() == false);
+    REQUIRE(cancelButton->isEnabled() == false);
+
+    QString statusMessage;
+    QObject::connect(configTab.get(), &ConfigTab::setStatusMessage,
+                     [&statusMessage](QString const &message, int) { statusMessage = message; });
     ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
     ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
     REQUIRE_CALL(*config, list()).RETURN(prepareList());
 
-    cancelButton->click();
+    usedFinishedHandler(130);
     wait_for_qthreads_to_finish();
 
     REQUIRE(startButton->isEnabled() == true);
     REQUIRE(cancelButton->isEnabled() == false);
+    REQUIRE(statusMessage == "Backup was cancelled");
   }
 
   SECTION("mount and umount button") {
@@ -171,7 +211,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(umountButton->isEnabled() == false);
 
     REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
-    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint)));
+    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint))).RETURN(true);
     REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(true);
     REQUIRE_CALL(*wrapperMock, openLocation(eq(QString::fromStdString(mountPoint))));
     mountButton->click();
@@ -184,7 +224,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(mountButton->isEnabled() == false);
     REQUIRE(umountButton->isEnabled() == true);
 
-    REQUIRE_CALL(*config, umountArchive(eq(mountPoint)));
+    REQUIRE_CALL(*config, umountArchive(eq(mountPoint))).RETURN(true);
     umountButton->click();
 
     REQUIRE(selectionModel->hasSelection() == false);
@@ -220,10 +260,28 @@ TEST_CASE("ConfigTab", "[ui]") {
     backupsTable->selectRow(row);
 
     REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
-    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint)));
+    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[row].name), eq(mountPoint))).RETURN(true);
     REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     FORBID_CALL(*wrapperMock, openLocation(_));
     mountButton->click();
+  }
+
+  SECTION("failed mount and umount leave the mount state unchanged") {
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    std::string mountPoint = "some_directory";
+
+    backupsTable->selectRow(0);
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString::fromStdString(mountPoint));
+    REQUIRE_CALL(*config, mountArchive(eq(prepareList()[0].name), eq(mountPoint))).RETURN(false);
+    FORBID_CALL(*wrapperMock, openLocation(_));
+    configTab->findChild<QPushButton *>("backupMountButton")->click();
+    REQUIRE(model->rowData(0).is_mounted == false);
+
+    backupsTable->selectRow(1);
+    REQUIRE_CALL(*config, umountArchive(_)).RETURN(false);
+    configTab->findChild<QPushButton *>("backupUmountButton")->click();
+    REQUIRE(model->rowData(1).is_mounted == true);
   }
 
   SECTION("list updates preserve mount information") {

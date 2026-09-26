@@ -42,11 +42,11 @@ void BorgmaticBackupWorker::createChildProcess(boost::asio::readable_pipe &ioPip
                           std::vector<std::string>{"--config", pathToConfig_.string(), "prune", "create", "--progress",
                                                    "check"},
                           bp::process_stdio{{}, ioPipe, {}});
-    spdlog::info("/usr/bin/borgmatic --config {} prune create --progress check", pathToConfig_.string());
+    spdlog::info("{} --config {} prune create --progress check", executable_.string(), pathToConfig_.string());
   } else {
     backupProcess.emplace(*ioContext, executable().string(),
                           std::vector<std::string>{"--config", pathToConfig_.string(), "create", "--progress", "check"},
                           bp::process_stdio{{}, ioPipe, {}});
-    spdlog::info("/usr/bin/borgmatic --config {} create --progress check", pathToConfig_.string());
+    spdlog::info("{} --config {} create --progress check", executable_.string(), pathToConfig_.string());
   }
 }

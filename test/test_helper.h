@@ -44,7 +44,7 @@ struct DesktopServicesWrapperMock : public trompeloeil::mock_interface<DesktopSe
 
 struct BackupWorkerMockImpl {
   MAKE_MOCK2(configure, void(std::filesystem::path, bool));
-  MAKE_MOCK2(start, void(std::function<void()>, std::function<void(std::string)>));
+  MAKE_MOCK2(start, void(std::function<void(int)>, std::function<void(std::string)>));
   MAKE_MOCK0(cancel, void());
 };
 
