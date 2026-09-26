@@ -1,3 +1,4 @@
+#include <spdlog/cfg/env.h>
 #include <spdlog/spdlog.h>
 
 #include <QApplication>
@@ -7,7 +8,9 @@
 #include "MainWindow.h"
 
 int main(int argc, char *argv[]) {
-  spdlog::set_level(spdlog::level::debug);
+  // Defaults to info; e.g. SPDLOG_LEVEL=debug enables debug output.
+  spdlog::set_level(spdlog::level::info);
+  spdlog::cfg::load_env_levels();
   QApplication app(argc, argv);
 
   QCoreApplication::setOrganizationName("holzner");

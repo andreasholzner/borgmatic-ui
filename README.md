@@ -34,7 +34,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-The executable is `build/borgmatic-ui`.
+The executable is `build/borgmatic-ui`. It logs to the terminal at level `info`; set e.g. `SPDLOG_LEVEL=debug` for
+more detail.
 
 To build without the tests, add `-DBUILD_TESTING=OFF` to the first command.
 
