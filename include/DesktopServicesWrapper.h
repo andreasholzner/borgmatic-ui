@@ -5,6 +5,7 @@
 #include <QWidget>
 #include <QDir>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QDesktopServices>
 #include <QUrl>
 
@@ -13,6 +14,7 @@ struct DesktopServicesWrapper {
   virtual QString selectBorgmaticConfigFile(QWidget *parent) = 0;
   virtual QString selectMountPoint(QWidget *parent) = 0;
   virtual void openLocation(QString const& path) = 0;
+  virtual bool confirm(QWidget *parent, QString const& title, QString const& question) = 0;
 };
 
 struct DesktopServicesWrapperImpl : public DesktopServicesWrapper {
@@ -26,6 +28,9 @@ struct DesktopServicesWrapperImpl : public DesktopServicesWrapper {
   }
   void openLocation(QString const& path) override {
     QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+  }
+  bool confirm(QWidget *parent, QString const& title, QString const& question) override {
+    return QMessageBox::question(parent, title, question, QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
   }
 };
 

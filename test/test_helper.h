@@ -44,6 +44,7 @@ struct DesktopServicesWrapperMock : public trompeloeil::mock_interface<DesktopSe
   IMPLEMENT_MOCK1(selectBorgmaticConfigFile);
   IMPLEMENT_MOCK1(selectMountPoint);
   IMPLEMENT_MOCK1(openLocation);
+  IMPLEMENT_MOCK3(confirm);
 };
 
 struct BackupWorkerMockImpl {

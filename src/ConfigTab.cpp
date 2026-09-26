@@ -73,6 +73,31 @@ void ConfigTab::on_deleteConfigButton_clicked() { emit deleteTab(getTabWidget()-
 
 bool ConfigTab::isBackupRunning() const { return backupRunning_; }
 
+bool ConfigTab::hasMountedArchives() const {
+  for (int row = 0; row != backupTableModel->rowCount(); ++row) {
+    if (backupTableModel->rowData(row).is_mounted) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ConfigTab::umountAllArchives() {
+  bool allUmounted = true;
+  for (int row = 0; row != backupTableModel->rowCount(); ++row) {
+    auto const &archive = backupTableModel->rowData(row);
+    if (!archive.is_mounted) {
+      continue;
+    }
+    if (backupConfig->umountArchive(archive.mount_path)) {
+      backupTableModel->setMountInfos(row, false, "");
+    } else {
+      allUmounted = false;
+    }
+  }
+  return allUmounted;
+}
+
 void ConfigTab::on_startBackupButton_clicked() {
   backupRunning_ = true;
   backupCancelled_ = false;

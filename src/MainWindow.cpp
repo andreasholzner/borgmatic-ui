@@ -1,11 +1,9 @@
 #include "MainWindow.h"
 
 #include <QFileInfo>
-#include <QMessageBox>
 #include <QSettings>
 #include <QStatusBar>
 #include <QString>
-#include <QTableView>
 #include <algorithm>
 
 #include "ConfigTab.h"
@@ -14,11 +12,12 @@
 static char const* const GEOMETRY_KEY = "mainwindow/geometry";
 static char const* const STATE_KEY = "mainwindow/state";
 
-MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget* parent)
+MainWindow::MainWindow(std::unique_ptr<BorgmaticManager> manager,
+                       std::shared_ptr<DesktopServicesWrapper> desktopServicesWrapper, QWidget* parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       borgmaticManager(std::move(manager)),
-      desktop_services_wrapper_(std::make_shared<DesktopServicesWrapperImpl>()) {
+      desktop_services_wrapper_(std::move(desktopServicesWrapper)) {
   ui->setupUi(this);
   ui->borgmaticTabWidget->clear();
   for (auto&& config : borgmaticManager->configs()) {
@@ -32,18 +31,15 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::closeEvent(QCloseEvent* event) {
   if (areAnyBackupsRunning()) {
     // Destroying the tabs cancels the backups and waits for borgmatic to exit.
-    auto reply = QMessageBox::question(this, "Beenden", "Es läuft noch ein Backup. Backup abbrechen und beenden?",
-                                       QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::No) {
+    if (!desktop_services_wrapper_->confirm(this, "Beenden",
+                                            "Es läuft noch ein Backup. Backup abbrechen und beenden?")) {
       event->ignore();
       return;
     }
   }
   if (areAnyArchivesMounted()) {
     spdlog::debug("Some archive are still mounted.");
-    auto reply = QMessageBox::question(this, "Beenden", "Es sind noch Archive gemountet. Trotzdem beenden?",
-                                       QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::No) {
+    if (!desktop_services_wrapper_->confirm(this, "Beenden", "Es sind noch Archive gemountet. Trotzdem beenden?")) {
       event->ignore();
       return;
     }
@@ -61,8 +57,23 @@ void MainWindow::on_menuNew_triggered() {
 void MainWindow::on_menuQuit_triggered() { close(); }
 
 void MainWindow::deleteConfigTab(int index) {
+  auto tab = qobject_cast<ConfigTab*>(ui->borgmaticTabWidget->widget(index));
+  if (tab->isBackupRunning() || tab->hasMountedArchives()) {
+    if (!desktop_services_wrapper_->confirm(this, "Delete configuration",
+                                            "A backup is running or archives are mounted. Cancel the backup, unmount "
+                                            "the archives and delete the configuration?")) {
+      return;
+    }
+    if (!tab->umountAllArchives()) {
+      ui->statusbar->showMessage("Unmounting failed, the configuration is kept.");
+      return;
+    }
+  }
   ui->borgmaticTabWidget->removeTab(index);
   borgmaticManager->removeConfig(index);
+  // The tab is the sender of the signal that got us here, so it must not be destroyed right away. Its destructor
+  // cancels a running backup.
+  tab->deleteLater();
 }
 
 void MainWindow::addTabForConfig(std::shared_ptr<BackupConfig> borgmaticConfig) {
@@ -94,14 +105,6 @@ bool MainWindow::areAnyBackupsRunning() {
 }
 
 bool MainWindow::areAnyArchivesMounted() {
-  for (auto tab : ui->borgmaticTabWidget->findChildren<ConfigTab*>()) {
-    auto backupsTable = tab->findChild<QTableView*>("backupsTableView");
-    auto model = qobject_cast<BackupListModel*>(backupsTable->model());
-    for (int i = 0; i != model->rowCount(); ++i) {
-      if (model->rowData(i).is_mounted) {
-        return true;
-      }
-    }
-  }
-  return false;
+  auto tabs = ui->borgmaticTabWidget->findChildren<ConfigTab*>();
+  return std::ranges::any_of(tabs, [](ConfigTab const* tab) { return tab->hasMountedArchives(); });
 }

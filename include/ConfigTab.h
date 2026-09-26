@@ -26,6 +26,9 @@ class ConfigTab : public QWidget {
   ~ConfigTab() override;
 
   bool isBackupRunning() const;
+  bool hasMountedArchives() const;
+  // Returns false if any archive could not be unmounted.
+  bool umountAllArchives();
 
   // Editing the config file path refreshes the tab once no further edit happened for this long.
   static constexpr int refreshDelayMs = 500;

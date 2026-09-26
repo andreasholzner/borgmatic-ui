@@ -1,6 +1,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QPushButton>
+#include <QPointer>
 #include <QTabWidget>
 #include <QtTest>
 #include <catch2/catch_all.hpp>
@@ -33,6 +34,21 @@ std::vector<std::shared_ptr<BackupConfig>> prepareMockedConfigs(
   });
   return res;
 }
+
+using Expectations = std::vector<std::unique_ptr<trompeloeil::expectation>>;
+
+// Allows everything a ConfigTab needs to display the config.
+void allowTabCalls(BackupConfigMock &config, Expectations &expectations,
+                   std::vector<backup::helper::ListItem> const &list = {}) {
+  expectations.push_back(NAMED_ALLOW_CALL(config, borgmaticConfigFile()).RETURN(std::string("name")));
+  expectations.push_back(NAMED_ALLOW_CALL(config, borgmaticConfigFile(_)));
+  expectations.push_back(NAMED_ALLOW_CALL(config, isBackupPurging()).RETURN(false));
+  expectations.push_back(NAMED_ALLOW_CALL(config, isMountPointToBeOpened()).RETURN(false));
+  expectations.push_back(NAMED_ALLOW_CALL(config, info()).RETURN(backup::helper::Info{}));
+  expectations.push_back(NAMED_ALLOW_CALL(config, list()).RETURN(list));
+}
+
+void processDeferredDeletes() { QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); }
 
 TEST_CASE("MainWindow", "[ui]") {
   auto uniqueManager = std::make_unique<BorgmaticManagerMock>();
@@ -126,5 +142,94 @@ TEST_CASE("MainWindow", "[ui]") {
 
     tabWidget->setCurrentIndex(1);
     wait_for_qthreads_to_finish();
+  }
+}
+
+TEST_CASE("MainWindow with active backups or mounts", "[ui]") {
+  auto uniqueManager = std::make_unique<BorgmaticManagerMock>();
+  auto manager = uniqueManager.get();
+  auto desktopServices = std::make_shared<DesktopServicesWrapperMock>();
+  auto config = std::make_shared<BackupConfigMock>();
+  Expectations expectations;
+  allowTabCalls(*config, expectations, {{"id1", "archive1", "2000-10-05 10:15:30.500", true, "/mnt/archive1"}});
+  expectations.push_back(NAMED_ALLOW_CALL(*manager, configs()).RETURN(prepareMockedConfigs({config})));
+
+  auto mainWindow = MainWindow{std::move(uniqueManager), desktopServices};
+  wait_for_qthreads_to_finish();
+  QApplication::processEvents();
+  auto tabWidget = mainWindow.findChild<QTabWidget *>("borgmaticTabWidget");
+  auto tab = qobject_cast<ConfigTab *>(tabWidget->widget(0));
+  auto deleteButton = tab->findChild<QPushButton *>("deleteConfigButton");
+  REQUIRE(tab->hasMountedArchives());
+
+  SECTION("deleting a tab with mounted archives is not done without confirmation") {
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).RETURN(false);
+    FORBID_CALL(*config, umountArchive(_));
+    FORBID_CALL(*manager, removeConfig(_));
+
+    deleteButton->click();
+
+    REQUIRE(tabWidget->count() == 1);
+  }
+
+  SECTION("deleting a tab unmounts its archives and destroys it") {
+    QPointer<ConfigTab> tabPointer{tab};
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).RETURN(true);
+    REQUIRE_CALL(*config, umountArchive(eq(std::string{"/mnt/archive1"}))).RETURN(true);
+    REQUIRE_CALL(*manager, removeConfig(eq(0)));
+
+    deleteButton->click();
+    processDeferredDeletes();
+
+    REQUIRE(tabWidget->count() == 0);
+    REQUIRE(tabPointer.isNull());
+  }
+
+  SECTION("a tab whose archives can't be unmounted is kept") {
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).RETURN(true);
+    REQUIRE_CALL(*config, umountArchive(_)).RETURN(false);
+    FORBID_CALL(*manager, removeConfig(_));
+
+    deleteButton->click();
+    processDeferredDeletes();
+
+    REQUIRE(tabWidget->count() == 1);
+    REQUIRE(tab->hasMountedArchives());
+  }
+
+  SECTION("deleting a tab with a running backup cancels the backup") {
+    REQUIRE_CALL(*config, startBackup(_, _));
+    tab->findChild<QPushButton *>("startBackupButton")->click();
+
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).RETURN(true);
+    REQUIRE_CALL(*config, umountArchive(_)).RETURN(true);
+    REQUIRE_CALL(*manager, removeConfig(eq(0)));
+    REQUIRE_CALL(*config, cancelBackupAndWait());
+
+    deleteButton->click();
+    processDeferredDeletes();
+
+    REQUIRE(tabWidget->count() == 0);
+  }
+
+  SECTION("closing is not done without confirmation") {
+    mainWindow.show();
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).RETURN(false);
+    FORBID_CALL(*manager, saveSettings());
+
+    REQUIRE_FALSE(mainWindow.close());
+  }
+
+  SECTION("closing with a running backup asks for both backup and mounts") {
+    mainWindow.show();
+    REQUIRE_CALL(*config, startBackup(_, _));
+    tab->findChild<QPushButton *>("startBackupButton")->click();
+
+    REQUIRE_CALL(*desktopServices, confirm(_, _, _)).TIMES(2).RETURN(true);
+    REQUIRE_CALL(*manager, saveSettings());
+    REQUIRE(mainWindow.close());
+
+    // destroying the window cancels the backup
+    expectations.push_back(NAMED_REQUIRE_CALL(*config, cancelBackupAndWait()));
   }
 }

@@ -17,7 +17,10 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
-  explicit MainWindow(std::unique_ptr<BorgmaticManager> manager, QWidget *parent = nullptr);
+  explicit MainWindow(std::unique_ptr<BorgmaticManager> manager,
+                      std::shared_ptr<DesktopServicesWrapper> desktopServicesWrapper =
+                          std::make_shared<DesktopServicesWrapperImpl>(),
+                      QWidget *parent = nullptr);
 
   ~MainWindow() override;
 
