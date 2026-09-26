@@ -234,7 +234,8 @@ esac)"};
 static std::optional<int> runBackup(BorgmaticBackupWorker& worker, std::vector<std::string>& output) {
   std::optional<int> exitCode;
   worker.configure("/some/config.yaml", false);
-  worker.start([&exitCode](int code) { exitCode = code; }, [&output](std::string const& line) { output.push_back(line); });
+  worker.start([&exitCode](int code) { exitCode = code; },
+               [&output](std::string const& line) { output.push_back(line); });
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
   while (!exitCode && std::chrono::steady_clock::now() < deadline) {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
