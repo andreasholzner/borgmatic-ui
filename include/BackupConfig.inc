@@ -15,7 +15,10 @@ std::string BackupConfigImpl<W>::borgmaticConfigFile() const {
 template <Worker W>
 void BackupConfigImpl<W>::borgmaticConfigFile(std::string const& configFile) {
   std::scoped_lock lock{mutex_};
-  pathToConfig = std::filesystem::path(configFile);
+  if (pathToConfig != configFile) {
+    pathToConfig = std::filesystem::path(configFile);
+    info_.reset();
+  }
 }
 
 template <Worker W>
@@ -112,7 +115,15 @@ template <Worker W>
 void BackupConfigImpl<W>::startBackup(std::function<void(int)> onFinished,
                                       std::function<void(std::string)> const& outputHandler) {
   worker.configure(configPath(), purgeFlag);
-  worker.start(std::move(onFinished), [outputHandler](std::string line) {
+  // A backup changes the repository's statistics, so the cached info is outdated afterwards.
+  auto finishedHandler = [this, onFinished = std::move(onFinished)](int exitCode) {
+    {
+      std::scoped_lock lock{mutex_};
+      info_.reset();
+    }
+    onFinished(exitCode);
+  };
+  worker.start(finishedHandler, [outputHandler](std::string line) {
     spdlog::debug(line);
     outputHandler(line);
   });

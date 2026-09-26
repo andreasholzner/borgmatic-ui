@@ -5,9 +5,9 @@
 #include <chrono>
 #include <fstream>
 #include <future>
-#include <thread>
 #include <memory>
 #include <optional>
+#include <thread>
 
 #include "BackupConfig.h"
 #include "test_helper.h"
@@ -89,24 +89,13 @@ TEST_CASE("BackupConfig with broken executable", "[logic]") {
   }
 }
 
-// Stands in for borgmatic: a shell script whose body decides the behaviour per action ($1).
-class FakeBorgmatic {
- public:
-  explicit FakeBorgmatic(std::string const& body) : path_(std::filesystem::path(dir_.path().toStdString()) / "borgmatic") {
-    std::ofstream{path_} << "#!/bin/sh\n" << body << "\n";
-    std::filesystem::permissions(path_, std::filesystem::perms::owner_all);
-  }
-  std::filesystem::path const& path() const { return path_; }
-
- private:
-  QTemporaryDir dir_;
-  std::filesystem::path path_;
-};
-
 struct ScriptedWorker {
   static inline std::filesystem::path script;
+  static inline std::function<void(int)> finishedHandler;
   void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
-  void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {}
+  void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {
+    finishedHandler = onFinished;
+  }
   void cancel() {}
   void cancelAndWait() {}
   std::filesystem::path executable() const { return script; }
@@ -197,6 +186,32 @@ esac)"};
 
     REQUIRE(runningInfo.get().location == "/some/config.yaml");
     REQUIRE(backupConfig.info().location == "/other/config.yaml");
+  }
+
+  SECTION("info is cached until the config file changes or a backup finished") {
+    // reports the content of a file next to the script as repository location
+    FakeBorgmatic borgmatic{R"(echo "[{\"repository\": {\"id\": \"id\", \"location\": \"$(cat "$0.location")\"}}]")"};
+    ScriptedWorker::script = borgmatic.path();
+    auto setLocation = [&borgmatic](std::string const& location) {
+      std::ofstream{borgmatic.path().string() + ".location"} << location;
+    };
+
+    setLocation("/first");
+    REQUIRE(backupConfig.info().location == "/first");
+    setLocation("/second");
+    REQUIRE(backupConfig.info().location == "/first");
+
+    backupConfig.borgmaticConfigFile("/some/config.yaml");
+    REQUIRE(backupConfig.info().location == "/first");
+    backupConfig.borgmaticConfigFile("/other/config.yaml");
+    REQUIRE(backupConfig.info().location == "/second");
+
+    setLocation("/third");
+    int reportedExitCode = -1;
+    backupConfig.startBackup([&reportedExitCode](int exitCode) { reportedExitCode = exitCode; });
+    ScriptedWorker::finishedHandler(0);
+    REQUIRE(reportedExitCode == 0);
+    REQUIRE(backupConfig.info().location == "/third");
   }
 
   SECTION("mount and umount report success") {

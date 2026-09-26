@@ -20,13 +20,20 @@ ConfigTab::ConfigTab(std::shared_ptr<BackupConfig> config,
   ui->backupsTableView->setModel(backupTableModel);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
   ui->backupsTableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
-  ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
 
+  refreshTimer_.setSingleShot(true);
+  refreshTimer_.setInterval(refreshDelayMs);
+  connect(&refreshTimer_, &QTimer::timeout, this, &ConfigTab::updateFromBackupConfig);
   connect(ui->backupsTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
           &ConfigTab::tableSelectionChanged);
   connect(&info_watcher_, &QFutureWatcher<backup::helper::Info>::finished, this, &ConfigTab::updateBackupInfos);
   connect(&list_watcher_, &QFutureWatcher<std::vector<backup::helper::ListItem>>::finished, this,
           &ConfigTab::updateBackupList);
+
+  ui->configEdit->setText(backupConfig->borgmaticConfigFile().c_str());
+  // The initial load doesn't need to wait for further edits.
+  refreshTimer_.stop();
+  updateFromBackupConfig();
 }
 
 ConfigTab::~ConfigTab() {
@@ -46,7 +53,7 @@ void ConfigTab::on_configEdit_textChanged(QString const &fileName) {
   }
 
   backupConfig->borgmaticConfigFile(fileName.toStdString());
-  updateFromBackupConfig();
+  refreshTimer_.start();
 }
 
 void ConfigTab::on_configEditFileButton_clicked() {
@@ -180,9 +187,20 @@ void ConfigTab::updateBackupInfos() {
   QLocale locale;
   ui->infoOriginalSizeLabel->setText(info.originalSize ? locale.formattedDataSize(info.originalSize) : "-");
   ui->infoCompressedSizeLabel->setText(info.compressedSize ? locale.formattedDataSize(info.compressedSize) : "-");
+  runPendingRefresh();
 }
 
-void ConfigTab::updateBackupList() { backupTableModel->updateBackups(list_future_.result()); }
+void ConfigTab::updateBackupList() {
+  backupTableModel->updateBackups(list_future_.result());
+  runPendingRefresh();
+}
+
+void ConfigTab::runPendingRefresh() {
+  if (refreshPending_ && !info_future_.isRunning() && !list_future_.isRunning()) {
+    refreshPending_ = false;
+    updateFromBackupConfig();
+  }
+}
 
 QTabWidget *ConfigTab::getTabWidget() const {
   return parentWidget() ? qobject_cast<QTabWidget *>(parentWidget()->parentWidget()) : nullptr;
@@ -194,17 +212,18 @@ void ConfigTab::updateFromBackupConfig() {
   ui->openMountPointCheckBox->setCheckState(backupConfig->isMountPointToBeOpened() ? Qt::CheckState::Checked
                                                                                    : Qt::CheckState::Unchecked);
 
-  if (!info_future_.isRunning()) {
-    // Capture the config, not this: the tab may be destroyed before the task has finished.
-    info_future_ = QtConcurrent::run([config = backupConfig]() -> backup::helper::Info { return config->info(); });
-    info_watcher_.setFuture(info_future_);
+  // A refresh still running may be for an outdated config file, so refresh again once it has finished.
+  if (info_future_.isRunning() || list_future_.isRunning()) {
+    refreshPending_ = true;
+    return;
   }
 
-  if (!list_future_.isRunning()) {
-    list_future_ = QtConcurrent::run(
-        [config = backupConfig]() -> std::vector<backup::helper::ListItem> { return config->list(); });
-    list_watcher_.setFuture(list_future_);
-  }
+  // Capture the config, not this: the tab may be destroyed before the task has finished.
+  info_future_ = QtConcurrent::run([config = backupConfig]() -> backup::helper::Info { return config->info(); });
+  info_watcher_.setFuture(info_future_);
+  list_future_ = QtConcurrent::run(
+      [config = backupConfig]() -> std::vector<backup::helper::ListItem> { return config->list(); });
+  list_watcher_.setFuture(list_future_);
 }
 
 bool ConfigTab::isRowSelected() const { return ui->backupsTableView->selectionModel()->hasSelection(); }

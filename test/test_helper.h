@@ -3,9 +3,12 @@
 
 #include <spdlog/spdlog.h>
 
+#include <QTemporaryDir>
+#include <QThreadPool>
 #include <catch2/trompeloeil.hpp>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <thread>
 
@@ -48,6 +51,20 @@ struct BackupWorkerMockImpl {
   MAKE_MOCK2(start, void(std::function<void(int)>, std::function<void(std::string)>));
   MAKE_MOCK0(cancel, void());
   MAKE_MOCK0(cancelAndWait, void());
+};
+
+// Stands in for borgmatic: a shell script whose body decides the behaviour per action ($1).
+class FakeBorgmatic {
+ public:
+  explicit FakeBorgmatic(std::string const& body) : path_(std::filesystem::path(dir_.path().toStdString()) / "borgmatic") {
+    std::ofstream{path_} << "#!/bin/sh\n" << body << "\n";
+    std::filesystem::permissions(path_, std::filesystem::perms::owner_all);
+  }
+  std::filesystem::path const& path() const { return path_; }
+
+ private:
+  QTemporaryDir dir_;
+  std::filesystem::path path_;
 };
 
 static void wait_for_qthreads_to_finish() {

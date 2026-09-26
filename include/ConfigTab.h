@@ -4,6 +4,7 @@
 #include <QFuture>
 #include <QString>
 #include <QTabWidget>
+#include <QTimer>
 #include <QWidget>
 #include <memory>
 
@@ -26,6 +27,9 @@ class ConfigTab : public QWidget {
 
   bool isBackupRunning() const;
 
+  // Editing the config file path refreshes the tab once no further edit happened for this long.
+  static constexpr int refreshDelayMs = 500;
+
  public slots:
   void onCurrentTabChanged(int index);
 
@@ -44,6 +48,7 @@ class ConfigTab : public QWidget {
   void backupFinished(int exitCode);
   void updateBackupInfos();
   void updateBackupList();
+  void runPendingRefresh();
 
  signals:
   void deleteTab(int index);
@@ -58,6 +63,8 @@ class ConfigTab : public QWidget {
   BackupListModel *backupTableModel;
   std::shared_ptr<BackupConfig> backupConfig;
   std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
+  QTimer refreshTimer_;
+  bool refreshPending_ = false;
   bool backupRunning_ = false;
   bool backupCancelled_ = false;
   QFuture<backup::helper::Info> info_future_;

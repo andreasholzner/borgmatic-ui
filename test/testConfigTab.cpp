@@ -7,7 +7,9 @@
 #include <QTableView>
 #include <QtTest>
 #include <catch2/catch_all.hpp>
+#include <algorithm>
 #include <catch2/trompeloeil.hpp>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -95,6 +97,28 @@ TEST_CASE("ConfigTab", "[ui]") {
     ALLOW_CALL(*config, isMountPointToBeOpened(eq(1)));
 
     configTab->findChild<QLineEdit *>("configEdit")->setText(newBorgmaticConfig.c_str());
+    QTest::qWait(ConfigTab::refreshDelayMs + 200);
+    wait_for_qthreads_to_finish();
+  }
+
+  SECTION("editing the config file path refreshes once after the last edit") {
+    ALLOW_CALL(*config, borgmaticConfigFile(_));
+    ALLOW_CALL(*config, isBackupPurging()).RETURN(false);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
+    auto configEdit = configTab->findChild<QLineEdit *>("configEdit");
+    {
+      FORBID_CALL(*config, info());
+      FORBID_CALL(*config, list());
+      configEdit->setText("/a");
+      configEdit->setText("/a/b");
+      configEdit->setText("/a/b/c");
+      QTest::qWait(ConfigTab::refreshDelayMs / 2);
+      wait_for_qthreads_to_finish();
+    }
+
+    REQUIRE_CALL(*config, info()).RETURN(prepareInfo());
+    REQUIRE_CALL(*config, list()).RETURN(prepareList());
+    QTest::qWait(ConfigTab::refreshDelayMs);
     wait_for_qthreads_to_finish();
   }
 
@@ -311,6 +335,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(true);
     ALLOW_CALL(*config, isMountPointToBeOpened(_));
     configTab->findChild<QLineEdit *>("configEdit")->setText("filename");
+    QTest::qWait(ConfigTab::refreshDelayMs + 200);
     wait_for_qthreads_to_finish();
     QApplication::processEvents();
 
@@ -328,5 +353,47 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE(model->rowData(2).name == "name3b");
     REQUIRE(model->rowData(2).is_mounted == false);
     REQUIRE(model->rowData(2).mount_path.empty());
+  }
+}
+
+struct FakeBorgmaticWorker {
+  static inline std::filesystem::path script;
+  void configure(std::filesystem::path pathToConfig, bool purgeFlag) {}
+  void start(std::function<void(int)> onFinished, std::function<void(std::string)> logHandler) {}
+  void cancel() {}
+  void cancelAndWait() {}
+  std::filesystem::path executable() const { return script; }
+};
+
+TEST_CASE("ConfigTab refresh with slow borgmatic", "[ui]") {
+  // logs every call as "<action> <config file>"; info takes a while
+  FakeBorgmatic borgmatic{R"(echo "$1 $4" >> "$0.calls"
+[ "$1" = info ] && sleep 1
+echo '[{"repository": {"id": "id", "location": "/tmp"}, "archives": []}]')"};
+  FakeBorgmaticWorker::script = borgmatic.path();
+  auto calledConfigs = [&borgmatic] {
+    std::ifstream calls{borgmatic.path().string() + ".calls"};
+    std::vector<std::string> lines;
+    for (std::string line; std::getline(calls, line);) {
+      lines.push_back(line);
+    }
+    return lines;
+  };
+  auto config = std::make_shared<BackupConfigImpl<FakeBorgmaticWorker>>();
+  config->borgmaticConfigFile("/first");
+  auto configTab = ConfigTab{config, std::make_shared<DesktopServicesWrapperMock>()};
+
+  SECTION("a path change during a running refresh triggers another refresh") {
+    QTest::qWait(200);
+    REQUIRE(std::ranges::count(calledConfigs(), std::string{"info /first"}) >= 1);
+
+    configTab.findChild<QLineEdit *>("configEdit")->setText("/second");
+    for (int i = 0; i != 100 && std::ranges::count(calledConfigs(), std::string{"info /second"}) == 0; ++i) {
+      QTest::qWait(50);
+    }
+    wait_for_qthreads_to_finish();
+    QApplication::processEvents();
+
+    REQUIRE(std::ranges::count(calledConfigs(), std::string{"info /second"}) >= 1);
   }
 }
