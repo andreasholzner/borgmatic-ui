@@ -135,20 +135,28 @@ void ConfigTab::on_backupMountButton_clicked() {
     return;
   }
   size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
-  auto backupName = backupTableModel->rowData(row).name;
-  spdlog::debug("Mounting archive {} to mount point {}", backupName, dir.toStdString());
-
-  bool mounted = backupConfig->mountArchive(backupName, dir.toStdString());
+  auto archive = backupTableModel->rowData(row);
   ui->backupsTableView->selectionModel()->clearSelection();
-  if (!mounted) {
-    emit setStatusMessage(QString("Mounting %1 failed").arg(backupName.c_str()));
-    return;
-  }
-  backupTableModel->setMountInfos(row, true, dir.toStdString());
+  spdlog::debug("Mounting archive {} to mount point {}", archive.name, dir.toStdString());
 
-  if (backupConfig->isMountPointToBeOpened()) {
-    desktop_services_wrapper_->openLocation(dir);
-  }
+  runMountOperation(
+      QString("Mounting %1 ...").arg(archive.name.c_str()), archive.id,
+      [config = backupConfig, name = archive.name, mountPoint = dir.toStdString()] {
+        return config->mountArchive(name, mountPoint);
+      },
+      [this, name = archive.name, dir](bool mounted, std::optional<size_t> row) {
+        if (!mounted) {
+          emit setStatusMessage(QString("Mounting %1 failed").arg(name.c_str()));
+          return;
+        }
+        emit setStatusMessage(QString("Mounted %1").arg(name.c_str()), 30000);
+        if (row) {
+          backupTableModel->setMountInfos(*row, true, dir.toStdString());
+        }
+        if (backupConfig->isMountPointToBeOpened()) {
+          desktop_services_wrapper_->openLocation(dir);
+        }
+      });
 }
 
 void ConfigTab::on_backupUmountButton_clicked() {
@@ -157,16 +165,43 @@ void ConfigTab::on_backupUmountButton_clicked() {
     return;
   }
   size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
-  auto mountPoint = backupTableModel->rowData(row).mount_path;
-  spdlog::debug("Umounting mount point: {}", mountPoint);
-
-  bool umounted = backupConfig->umountArchive(mountPoint);
+  auto archive = backupTableModel->rowData(row);
   ui->backupsTableView->selectionModel()->clearSelection();
-  if (!umounted) {
-    emit setStatusMessage(QString("Unmounting %1 failed").arg(mountPoint.c_str()));
-    return;
-  }
-  backupTableModel->setMountInfos(row, false, "");
+  spdlog::debug("Umounting mount point: {}", archive.mount_path);
+
+  runMountOperation(
+      QString("Unmounting %1 ...").arg(archive.mount_path.c_str()), archive.id,
+      [config = backupConfig, mountPoint = archive.mount_path] { return config->umountArchive(mountPoint); },
+      [this, mountPoint = archive.mount_path](bool umounted, std::optional<size_t> row) {
+        if (!umounted) {
+          emit setStatusMessage(QString("Unmounting %1 failed").arg(mountPoint.c_str()));
+          return;
+        }
+        emit setStatusMessage(QString("Unmounted %1").arg(mountPoint.c_str()), 30000);
+        if (row) {
+          backupTableModel->setMountInfos(*row, false, "");
+        }
+      });
+}
+
+void ConfigTab::runMountOperation(QString const &message, std::string const &archiveId,
+                                  std::function<bool()> operation,
+                                  std::function<void(bool, std::optional<size_t>)> onFinished) {
+  mountOperationRunning_ = true;
+  updateMountButtons();
+  emit setStatusMessage(message);
+
+  // The watcher is a child of this tab, so onFinished isn't called after the tab has been destroyed. The operation
+  // itself must not refer to the tab.
+  auto watcher = new QFutureWatcher<bool>(this);
+  connect(watcher, &QFutureWatcher<bool>::finished, this, [this, watcher, archiveId, onFinished] {
+    mountOperationRunning_ = false;
+    // The list may have been refreshed in the meantime, so look the archive up again.
+    onFinished(watcher->result(), backupTableModel->rowOfArchive(archiveId));
+    updateMountButtons();
+    watcher->deleteLater();
+  });
+  watcher->setFuture(QtConcurrent::run(std::move(operation)));
 }
 
 void ConfigTab::onCurrentTabChanged(int index) {
@@ -176,7 +211,11 @@ void ConfigTab::onCurrentTabChanged(int index) {
 }
 
 void ConfigTab::tableSelectionChanged(QItemSelection const &current, QItemSelection const &previous) {
-  if (ui->backupsTableView->selectionModel()->hasSelection()) {
+  updateMountButtons();
+}
+
+void ConfigTab::updateMountButtons() {
+  if (!mountOperationRunning_ && ui->backupsTableView->selectionModel()->hasSelection()) {
     size_t row = ui->backupsTableView->selectionModel()->currentIndex().row();
     spdlog::trace("row changed. new row: {}", row);
     bool is_row_mounted = backupTableModel->rowData(row).is_mounted;

@@ -68,6 +68,14 @@ void BackupListModel::updateBackups(std::vector<backup::helper::ListItem> const 
 
 backup::helper::ListItem const &BackupListModel::rowData(size_t row) const { return backups.at(row); }
 
+std::optional<size_t> BackupListModel::rowOfArchive(std::string const &id) const {
+  auto archive = std::ranges::find(backups, id, &backup::helper::ListItem::id);
+  if (archive == backups.end()) {
+    return std::nullopt;
+  }
+  return std::distance(backups.begin(), archive);
+}
+
 void BackupListModel::setMountInfos(size_t row, bool is_mounted, const std::string &mount_point) {
   if (row > backups.size()) {
     spdlog::warn("Trying to update mount data: row index out of range: {}.", row);

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <catch2/trompeloeil.hpp>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -252,6 +253,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(true);
     REQUIRE_CALL(*wrapperMock, openLocation(eq(QString::fromStdString(mountPoint))));
     mountButton->click();
+    wait_for_background_tasks();
 
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == true);
@@ -263,6 +265,7 @@ TEST_CASE("ConfigTab", "[ui]") {
 
     REQUIRE_CALL(*config, umountArchive(eq(mountPoint))).RETURN(true);
     umountButton->click();
+    wait_for_background_tasks();
 
     REQUIRE(selectionModel->hasSelection() == false);
     REQUIRE(model->rowData(row).is_mounted == false);
@@ -301,6 +304,7 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, isMountPointToBeOpened()).RETURN(false);
     FORBID_CALL(*wrapperMock, openLocation(_));
     mountButton->click();
+    wait_for_background_tasks();
   }
 
   SECTION("failed mount and umount leave the mount state unchanged") {
@@ -313,12 +317,62 @@ TEST_CASE("ConfigTab", "[ui]") {
     REQUIRE_CALL(*config, mountArchive(eq(prepareList()[0].name), eq(mountPoint))).RETURN(false);
     FORBID_CALL(*wrapperMock, openLocation(_));
     configTab->findChild<QPushButton *>("backupMountButton")->click();
+    wait_for_background_tasks();
     REQUIRE(model->rowData(0).is_mounted == false);
 
     backupsTable->selectRow(1);
     REQUIRE_CALL(*config, umountArchive(_)).RETURN(false);
     configTab->findChild<QPushButton *>("backupUmountButton")->click();
+    wait_for_background_tasks();
     REQUIRE(model->rowData(1).is_mounted == true);
+  }
+
+  SECTION("mount buttons are disabled while a mount is running") {
+    auto mountButton = configTab->findChild<QPushButton *>("backupMountButton");
+    auto umountButton = configTab->findChild<QPushButton *>("backupUmountButton");
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    std::promise<void> mountMayFinish;
+    auto mountFinished = mountMayFinish.get_future().share();
+
+    backupsTable->selectRow(0);
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString("some_directory"));
+    REQUIRE_CALL(*config, mountArchive(_, _)).LR_SIDE_EFFECT(mountFinished.wait()).RETURN(true);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
+    mountButton->click();
+
+    backupsTable->selectRow(0);
+    REQUIRE(mountButton->isEnabled() == false);
+    REQUIRE(umountButton->isEnabled() == false);
+
+    mountMayFinish.set_value();
+    wait_for_background_tasks();
+    REQUIRE(model->rowData(0).is_mounted == true);
+    backupsTable->selectRow(0);
+    REQUIRE(umountButton->isEnabled() == true);
+  }
+
+  SECTION("a finished mount is applied to the archive even if the list was reordered") {
+    auto backupsTable = configTab->findChild<QTableView *>("backupsTableView");
+    auto model = qobject_cast<BackupListModel *>(backupsTable->model());
+    std::promise<void> mountMayFinish;
+    auto mountFinished = mountMayFinish.get_future().share();
+
+    backupsTable->selectRow(0);
+    REQUIRE_CALL(*wrapperMock, selectMountPoint(_)).RETURN(QString("some_directory"));
+    REQUIRE_CALL(*config, mountArchive(eq(std::string{"name1"}), _)).LR_SIDE_EFFECT(mountFinished.wait()).RETURN(true);
+    ALLOW_CALL(*config, isMountPointToBeOpened()).RETURN(false);
+    configTab->findChild<QPushButton *>("backupMountButton")->click();
+
+    auto reordered = prepareList();
+    std::swap(reordered[0], reordered[1]);
+    model->updateBackups(reordered);
+    mountMayFinish.set_value();
+    wait_for_background_tasks();
+
+    REQUIRE(model->rowData(1).id == "id1");
+    REQUIRE(model->rowData(1).is_mounted == true);
+    REQUIRE(model->rowData(1).mount_path == "some_directory");
   }
 
   SECTION("list updates preserve mount information") {

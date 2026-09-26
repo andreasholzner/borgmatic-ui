@@ -79,4 +79,11 @@ static void wait_for_qthreads_to_finish() {
   spdlog::warn("Thread count did not decrease to 0 within waiting period.");
 }
 
+// Waits for thread pool tasks and delivers their completion signals.
+static void wait_for_background_tasks() {
+  wait_for_qthreads_to_finish();
+  QCoreApplication::processEvents();
+  QCoreApplication::processEvents();
+}
+
 #endif  // BORGMATIC_UI_TEST_TEST_HELPER_H_

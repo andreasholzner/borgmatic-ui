@@ -6,7 +6,9 @@
 #include <QTabWidget>
 #include <QTimer>
 #include <QWidget>
+#include <functional>
 #include <memory>
+#include <optional>
 
 #include "BackupConfig.h"
 #include "BackupListModel.h"
@@ -52,6 +54,7 @@ class ConfigTab : public QWidget {
   void updateBackupInfos();
   void updateBackupList();
   void runPendingRefresh();
+  void updateMountButtons();
 
  signals:
   void deleteTab(int index);
@@ -61,6 +64,10 @@ class ConfigTab : public QWidget {
   QTabWidget *getTabWidget() const;
   void updateFromBackupConfig();
   bool isRowSelected() const;
+  // Runs a mount or umount in the background; onFinished gets its success and the archive's current row, if the
+  // archive is still listed.
+  void runMountOperation(QString const &message, std::string const &archiveId, std::function<bool()> operation,
+                         std::function<void(bool, std::optional<size_t>)> onFinished);
 
   Ui::TabContent *ui;
   BackupListModel *backupTableModel;
@@ -68,6 +75,7 @@ class ConfigTab : public QWidget {
   std::shared_ptr<DesktopServicesWrapper> desktop_services_wrapper_;
   QTimer refreshTimer_;
   bool refreshPending_ = false;
+  bool mountOperationRunning_ = false;
   bool backupRunning_ = false;
   bool backupCancelled_ = false;
   QFuture<backup::helper::Info> info_future_;

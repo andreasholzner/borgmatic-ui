@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QModelIndex>
 #include <QVariant>
+#include <optional>
 #include <vector>
 
 #include "BackupConfig.h"
@@ -18,6 +19,7 @@ class BackupListModel : public QAbstractTableModel {
   int columnCount(QModelIndex const &parent = QModelIndex()) const override;
   void updateBackups(std::vector<backup::helper::ListItem> const &data);
   backup::helper::ListItem const &rowData(size_t row) const;
+  std::optional<size_t> rowOfArchive(std::string const &id) const;
   void setMountInfos(size_t row, bool is_mounted, std::string const &mount_point);
 
  private:
